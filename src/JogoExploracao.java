@@ -3,7 +3,7 @@ import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 
-
+//teste
 
 public class JogoExploracao extends JPanel implements KeyListener {
     // Posição do personagem no mapa gigante
