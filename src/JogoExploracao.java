@@ -11,7 +11,7 @@ public class JogoExploracao extends JPanel implements KeyListener {
     int mundoY = 1000;
 
     Image imagemPersonagem;
-    Image imagemMapa;
+    Image imagemMapa; //mamou
 
     public JogoExploracao() {
         // Carrega o mapa e o personagem
