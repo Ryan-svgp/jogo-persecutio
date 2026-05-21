@@ -17,7 +17,7 @@ public class TelaMenu extends JPanel implements KeyListener {
     Image imagemVhs;
 
     // Opções do Menu
-    String[] opcoes = {"NOVO JOGO", "CONFIGURAÇÕES", "SAIR"};
+    String[] opcoes = {"NOVO JOGO", "SAIR"};
     int opcaoSelecionada = 0; // Começa no "NOVO JOGO"
     JFrame janelaPrincipal;
 
@@ -127,9 +127,7 @@ public class TelaMenu extends JPanel implements KeyListener {
                 janelaPrincipal.repaint();
                 jogo.requestFocusInWindow();
 
-            } else if (opcaoSelecionada == 1) { // CONFIGURAÇÕES
-                JOptionPane.showMessageDialog(this, "Em construção...");
-            } else if (opcaoSelecionada == 2) { // SAIR
+            }else if (opcaoSelecionada == 1) { // SAIR
                 System.exit(0);
             }
         }
