@@ -3,9 +3,11 @@ import javax.swing.*;
 public class Main {
     public static void main(String[] args) {
         JFrame janela = new JFrame("Casa de Repouso");
-        JogoExploracao jogo = new JogoExploracao();
-
-        janela.add(jogo);
+        
+        // Em vez de carregar o jogo, carrega o menu primeiro!
+        TelaMenu menu = new TelaMenu(janela);
+        janela.add(menu);
+        
         // 1. Tira a barra de cima (o X, o minimizar e as bordas)
         janela.setUndecorated(true);
         // 2. Trava o tamanho para não deixar o usuário arrastar
