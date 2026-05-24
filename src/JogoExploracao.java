@@ -1,138 +1,236 @@
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
-import java.io.File;
+import java.awt.event.*;
+import java.util.ArrayList;
 
-// Importações para o Áudio
-import javax.sound.sampled.AudioInputStream;
-import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.Clip;
+public class JogoExploracao extends JPanel implements KeyListener {
 
-public class TelaMenu extends JPanel implements KeyListener {
+    ArrayList<Rectangle> paredes = new ArrayList<>();
+    
+    //posicao no mundo
+    int mundoX = 0;
+    int mundoY = 0;
 
-    // Nossas imagens e o GIF
-    Image imagemFundo;
-    Image imagemLogo;
-    Image imagemVhs;
+    // mapa e spritesheet
+    Image imagemMapa;
+    Image spriteSheet;
 
-    // Opções do Menu
-    String[] opcoes = {"NOVO JOGO", "SAIR"};
-    int opcaoSelecionada = 0; // Começa no "NOVO JOGO"
-    JFrame janelaPrincipal;
+    // tamanho de cada frame
+    final int TAMANHO = 32;
 
-    // Toca-fitas do Java para a música
-    Clip musicaFundo;
+    // direção atual
+    int direcao = 0;
 
-    public TelaMenu(JFrame janela) {
-        this.janelaPrincipal = janela;
+    // frame atual da animação
+    int frame = 0;
 
-        // 1. Carrega todas as imagens da pasta img/
-        imagemFundo = new ImageIcon("img/fundo_menu.jpg").getImage();
-        imagemLogo = new ImageIcon("img/titulo_logo.png").getImage();
-        imagemVhs = new ImageIcon("img/vhs.gif").getImage();
+    // contador para controlar velocidade da animação
+    int contadorAnimacao = 0;
+
+    // ==========================================
+    // 1. VARIÁVEIS DA PAUSA
+    // ==========================================
+    boolean pausado = false;
+    int opcao = 0;
+
+    public JogoExploracao() {
+        imagemMapa = new ImageIcon("img/quarto-clara-prototipo.png").getImage();
+        spriteSheet = new ImageIcon("img/personagem.png").getImage();
+
+        paredes.add(new Rectangle(0, 0, 528, 48));
+        paredes.add(new Rectangle(0, 0, 48, 480));
+        paredes.add(new Rectangle(0, 432, 336, 48));
+        paredes.add(new Rectangle(432, 432, 96, 48));
+        paredes.add(new Rectangle(480, 0, 48, 480));
+        paredes.add(new Rectangle(338, 0, 20, 240));
+        paredes.add(new Rectangle(336, 196, 48, 48));
+        paredes.add(new Rectangle(460, 196, 48, 48));
+        
+        mundoX = imagemMapa.getWidth(this) / 2;
+        mundoY = imagemMapa.getHeight(this) / 2;
 
         addKeyListener(this);
         setFocusable(true);
-
-        // 2. Toca a música assim que o menu abre
-        tocarMusica("audio/musica_menu.wav");
     }
 
-    // --- FUNÇÃO PARA TOCAR ÁUDIO ---
-    public void tocarMusica(String caminhoArquivo) {
-        try {
-            File arquivo = new File(caminhoArquivo);
-            AudioInputStream audioStream = AudioSystem.getAudioInputStream(arquivo);
-
-            musicaFundo = AudioSystem.getClip();
-            musicaFundo.open(audioStream);
-            musicaFundo.loop(Clip.LOOP_CONTINUOUSLY); // Toca em loop infinito
-
-        } catch (Exception e) {
-            System.out.println("Erro ao tocar música. O arquivo .wav existe na pasta audio?");
-        }
-    }
-
-    // --- ONDE DESENHAMOS A TELA ---
     @Override
     public void paintComponent(Graphics g) {
         super.paintComponent(g);
 
-        // 1º: A foto da Maria Clara (Fundo)
-        g.drawImage(imagemFundo, 0, 0, getWidth(), getHeight(), this);
+        g.setColor(Color.BLACK);
+        g.fillRect(0, 0, getWidth(), getHeight()); 
+        
+        // centro REAL da tela
+        int centroX = getWidth() / 2;
+        int centroY = getHeight() / 2;
 
-        // 2º: A Logo do jogo
-        g.drawImage(imagemLogo, 100, 100, 600, 150, this);
-
-        // 3º: O Menu de opções
-        g.setFont(new Font("Arial", Font.BOLD, 40));
-
-        for (int i = 0; i < opcoes.length; i++) {
-            // Se for o botão selecionado, pinta de branco e coloca a seta FIXA
-            if (i == opcaoSelecionada) {
-                g.setColor(Color.WHITE);
-                g.drawString("-> " + opcoes[i], 100, 350 + (i * 60));
-            }
-            // Se não for, pinta de cinza e sem seta
-            else {
-                g.setColor(Color.GRAY);
-                g.drawString("   " + opcoes[i], 100, 350 + (i * 60));
-            }
+        // câmera
+        int cameraX = centroX - mundoX;
+        int cameraY = centroY - mundoY;
+        
+        g.setColor(Color.RED);
+        for (Rectangle parede : paredes) {
+            g.drawRect(
+                parede.x + cameraX,
+                parede.y + cameraY,
+                parede.width,
+                parede.height
+            );
         }
 
+        // mapa
+        g.drawImage(imagemMapa, cameraX, cameraY, this);
+
+        // coordenadas do frame na spritesheet
+        int sx1 = frame * TAMANHO;
+        int sy1 = direcao * TAMANHO;
+        int sx2 = sx1 + TAMANHO;
+        int sy2 = sy1 + TAMANHO;
+
+        // desenha personagem centralizado
+        g.drawImage(
+            spriteSheet,
+            centroX - 28,
+            centroY - 28,
+            centroX + 28,
+            centroY + 28,
+            sx1,
+            sy1,
+            sx2,
+            sy2,
+            this
+        );
+
         // ==========================================
-        // 4º: O GIF DO VHS (Com truque de Transparência)
+        // 2. DESENHO DO MENU DE PAUSA
         // ==========================================
-        Graphics2D g2d = (Graphics2D) g;
+        if (pausado) {
+            // Escurece um pouco a tela
+            g.setColor(new Color(0, 0, 0, 180));
+            g.fillRect(0, 0, getWidth(), getHeight());
 
-        // Coloca 30% de opacidade no pincel
-        g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.3f));
-
-        // Desenha o GIF esticado na tela inteira
-        g2d.drawImage(imagemVhs, 0, 0, getWidth(), getHeight(), this);
-
-        // Volta o pincel para 100% de opacidade
-        g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1.0f));
+            // Desenha os textos bem no meio da tela
+            g.setColor(Color.WHITE);
+            g.setFont(new Font("Arial", Font.BOLD, 40));
+            
+            // O "? :" é um truque do Java que escreve a seta só na opção selecionada
+            g.drawString(opcao == 0 ? "-> VOLTAR" : "   VOLTAR", centroX - 100, centroY);
+            g.drawString(opcao == 1 ? "-> SAIR" : "   SAIR", centroX - 100, centroY + 60);
+        }
     }
 
-    // --- CONTROLES DO TECLADO ---
     @Override
     public void keyPressed(KeyEvent e) {
         int tecla = e.getKeyCode();
 
-        if (tecla == KeyEvent.VK_UP || tecla == KeyEvent.VK_W) {
-            opcaoSelecionada--;
-            if (opcaoSelecionada < 0) opcaoSelecionada = 1; // Volta pro final
-            repaint(); // Atualiza a tela
+        // ==========================================
+        // 3. CONTROLES DA PAUSA
+        // ==========================================
+        // Se apertar ESC, pausa/despausa e trava o código aqui com o "return"
+        if (tecla == KeyEvent.VK_ESCAPE) { pausado = !pausado; repaint(); return; }
+        
+        // Se estiver pausado, controla o menu e não deixa o boneco andar
+        if (pausado) {
+            if (tecla == KeyEvent.VK_UP || tecla == KeyEvent.VK_W) opcao = 0;
+            if (tecla == KeyEvent.VK_DOWN || tecla == KeyEvent.VK_S) opcao = 1;
+            if (tecla == KeyEvent.VK_ENTER && opcao == 0) pausado = false;
+            if (tecla == KeyEvent.VK_ENTER && opcao == 1) System.exit(0); // Fecha o jogo
+            repaint();
+            return; 
         }
-        else if (tecla == KeyEvent.VK_DOWN || tecla == KeyEvent.VK_S) {
-            opcaoSelecionada++;
-            if (opcaoSelecionada > 1) opcaoSelecionada = 0; // Volta pro topo
-            repaint(); // Atualiza a tela
-        }
-        else if (tecla == KeyEvent.VK_ENTER) {
-            if (opcaoSelecionada == 0) { // NOVO JOGO
 
-                // Para a música antes de ir pro jogo
-                if (musicaFundo != null) {
-                    musicaFundo.stop();
+        // --- CÓDIGO ORIGINAL DE ANDAR (Só roda se NÃO estiver pausado) ---
+        boolean movendo = false;
+
+        // DIREITA
+        if (tecla == KeyEvent.VK_RIGHT || tecla == KeyEvent.VK_D) {
+            int novoX = mundoX + 5;
+            Rectangle futuro = new Rectangle(novoX, mundoY, 32, 32);
+            boolean bateu = false;
+            for (Rectangle parede : paredes) {
+                if (futuro.intersects(parede)) {
+                    bateu = true;
                 }
+            }
+            if (!bateu) {
+                mundoX = novoX;
+            }
+            direcao = 1;
+            movendo = true;
+        }
 
-                // Troca as telas
-                janelaPrincipal.getContentPane().removeAll();
-                JogoExploracao jogo = new JogoExploracao();
-                janelaPrincipal.add(jogo);
-                janelaPrincipal.revalidate();
-                janelaPrincipal.repaint();
-                jogo.requestFocusInWindow();
+        // ESQUERDA
+        if (tecla == KeyEvent.VK_LEFT || tecla == KeyEvent.VK_A) {
+            int novoX = mundoX - 5;
+            Rectangle futuro = new Rectangle(novoX, mundoY, 32, 32);
+            boolean bateu = false;
+            for (Rectangle parede : paredes) {
+                if (futuro.intersects(parede)) {
+                    bateu = true;
+                }
+            }
+            if (!bateu) {
+                mundoX = novoX;
+            }
+            direcao = 2;
+            movendo = true;
+        }
 
-            }else if (opcaoSelecionada == 1) { // SAIR
-                System.exit(0);
+        // CIMA
+        if (tecla == KeyEvent.VK_UP || tecla == KeyEvent.VK_W) {
+            int novoY = mundoY - 5;
+            Rectangle futuro = new Rectangle(mundoX, novoY, 32, 32);
+            boolean bateu = false;
+            for (Rectangle parede : paredes) {
+                if (futuro.intersects(parede)) {
+                    bateu = true;
+                }
+            }
+            if (!bateu) {
+                mundoY = novoY;
+            }
+            direcao = 3;
+            movendo = true;
+        }
+
+        // BAIXO
+        if (tecla == KeyEvent.VK_DOWN || tecla == KeyEvent.VK_S) {
+            int novoY = mundoY + 5;
+            Rectangle futuro = new Rectangle(mundoX, novoY, 32, 32);
+            boolean bateu = false;
+            for (Rectangle parede : paredes) {
+                if (futuro.intersects(parede)) {
+                    bateu = true;
+                }
+            }
+            if (!bateu) {
+                mundoY = novoY;
+            }
+            direcao = 0;
+            movendo = true;
+        }
+
+        // animação
+        if (movendo) {
+            contadorAnimacao++;
+            if (contadorAnimacao >= 5) {
+                contadorAnimacao = 0;
+                frame++;
+                if (frame > 3) {
+                    frame = 0;
+                }
             }
         }
+        repaint();
     }
 
-    @Override public void keyReleased(KeyEvent e) {}
-    @Override public void keyTyped(KeyEvent e) {}
+    @Override
+    public void keyReleased(KeyEvent e) {
+        if (pausado) return;
+        frame = 0;
+        repaint();
+    }
+
+    @Override
+    public void keyTyped(KeyEvent e) {}
 }
