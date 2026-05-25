@@ -2,7 +2,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
-import java.io.File;
+import java.io.*;
 
 // Importações para o Áudio
 import javax.sound.sampled.AudioInputStream;
@@ -53,6 +53,8 @@ public class TelaMenu extends JPanel implements KeyListener {
             System.out.println("Erro ao tocar música. O arquivo .wav existe na pasta audio?");
         }
     }
+    
+   
 
     // --- ONDE DESENHAMOS A TELA ---
     @Override
@@ -63,23 +65,35 @@ public class TelaMenu extends JPanel implements KeyListener {
         g.drawImage(imagemFundo, 0, 0, getWidth(), getHeight(), this);
 
         // 2º: A Logo do jogo
-        g.drawImage(imagemLogo, 100, 100, 600, 150, this);
+        g.drawImage(imagemLogo, 100, 150, 640, 104, this);
+        
+        Font fontePress;
+
+        try {
+            fontePress = Font.createFont(Font.TRUETYPE_FONT, new File("font/press.ttf"));
+            fontePress = fontePress.deriveFont(40f); // tamanho da fonte
+        } catch (Exception e) {
+            System.out.println("Erro ao carregar fonte");
+            fontePress = new Font("Arial", Font.BOLD, 40); // fallback
+        }
 
         // 3º: O Menu de opções
-        g.setFont(new Font("Arial", Font.BOLD, 40));
+        g.setFont(fontePress);
 
         for (int i = 0; i < opcoes.length; i++) {
             // Se for o botão selecionado, pinta de branco e coloca a seta FIXA
             if (i == opcaoSelecionada) {
                 g.setColor(Color.WHITE);
-                g.drawString("-> " + opcoes[i], 100, 350 + (i * 60));
+                g.drawString("-> " + opcoes[i], 100, 400 + (i * 60));
             }
             // Se não for, pinta de cinza e sem seta
             else {
                 g.setColor(Color.GRAY);
-                g.drawString("   " + opcoes[i], 100, 350 + (i * 60));
+                g.drawString("   " + opcoes[i], 100, 400 + (i * 60));
             }
         }
+        
+       
 
         // ==========================================
         // 4º: O GIF DO VHS (Com truque de Transparência)
@@ -103,12 +117,12 @@ public class TelaMenu extends JPanel implements KeyListener {
 
         if (tecla == KeyEvent.VK_UP || tecla == KeyEvent.VK_W) {
             opcaoSelecionada--;
-            if (opcaoSelecionada < 0) opcaoSelecionada = 2; // Volta pro final
+            if (opcaoSelecionada < 0) opcaoSelecionada = 1; // Volta pro final
             repaint(); // Atualiza a tela
         }
         else if (tecla == KeyEvent.VK_DOWN || tecla == KeyEvent.VK_S) {
             opcaoSelecionada++;
-            if (opcaoSelecionada > 2) opcaoSelecionada = 0; // Volta pro topo
+            if (opcaoSelecionada > 1) opcaoSelecionada = 0; // Volta pro topo
             repaint(); // Atualiza a tela
         }
         else if (tecla == KeyEvent.VK_ENTER) {
@@ -132,6 +146,8 @@ public class TelaMenu extends JPanel implements KeyListener {
             }
         }
     }
+    
+    
 
     @Override public void keyReleased(KeyEvent e) {}
     @Override public void keyTyped(KeyEvent e) {}
