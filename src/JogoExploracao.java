@@ -1,4 +1,6 @@
 import javax.swing.*;
+import javax.sound.sampled.*;
+import java.io.File;
 import java.awt.*;
 import java.awt.event.*;
 import java.util.ArrayList;
@@ -14,6 +16,7 @@ public class JogoExploracao extends JPanel implements KeyListener {
     // mapa e spritesheet
     Image imagemMapa;
     Image spriteSheet;
+    Image luzMapa;
 
     // tamanho de cada frame
     final int TAMANHO = 32;
@@ -26,6 +29,11 @@ public class JogoExploracao extends JPanel implements KeyListener {
 
     // contador para controlar velocidade da animação
     int contadorAnimacao = 0;
+    
+ // som dos passos
+    Clip somPassos;
+    boolean andando = false;
+    Clip ambiente;
 
     // ==========================================
     // 1. VARIÁVEIS DA PAUSA
@@ -36,6 +44,7 @@ public class JogoExploracao extends JPanel implements KeyListener {
     public JogoExploracao() {
         imagemMapa = new ImageIcon("img/quarto-clara-prototipo.png").getImage();
         spriteSheet = new ImageIcon("img/personagem.png").getImage();
+        luzMapa = new ImageIcon("img/luz-sombra-temp.png").getImage();
 
         paredes.add(new Rectangle(0, 0, 528, 48));
         paredes.add(new Rectangle(0, 0, 48, 480));
@@ -49,6 +58,49 @@ public class JogoExploracao extends JPanel implements KeyListener {
         mundoX = imagemMapa.getWidth(this) / 2;
         mundoY = imagemMapa.getHeight(this) / 2;
 
+        try {
+
+            AudioInputStream audio =
+                AudioSystem.getAudioInputStream(
+                    new File("audio/passos.wav")
+                );
+
+            somPassos = AudioSystem.getClip();
+
+            somPassos.open(audio);
+
+        } catch (Exception e) {
+
+            e.printStackTrace();
+
+        }
+        
+        try {
+
+            AudioInputStream audio =
+                AudioSystem.getAudioInputStream(
+                    new File("audio/ambiente.wav")
+                );
+
+            ambiente = AudioSystem.getClip();
+
+            ambiente.open(audio);
+            
+            FloatControl volume =
+            	    (FloatControl)
+            	    ambiente.getControl(FloatControl.Type.MASTER_GAIN);
+
+            	volume.setValue(-15.0f);
+            	
+            	 ambiente.loop(Clip.LOOP_CONTINUOUSLY);
+
+        } catch (Exception e) {
+
+            e.printStackTrace();
+
+        }
+        
+       
         addKeyListener(this);
         setFocusable(true);
     }
@@ -67,6 +119,7 @@ public class JogoExploracao extends JPanel implements KeyListener {
         // câmera
         int cameraX = centroX - mundoX;
         int cameraY = centroY - mundoY;
+        
         
         g.setColor(Color.RED);
         for (Rectangle parede : paredes) {
@@ -100,6 +153,8 @@ public class JogoExploracao extends JPanel implements KeyListener {
             sy2,
             this
         );
+        
+        g.drawImage(luzMapa, cameraX, cameraY, this);
 
         // ==========================================
         // 2. DESENHO DO MENU DE PAUSA
@@ -212,13 +267,31 @@ public class JogoExploracao extends JPanel implements KeyListener {
 
         // animação
         if (movendo) {
+
             contadorAnimacao++;
+
             if (contadorAnimacao >= 5) {
+
                 contadorAnimacao = 0;
+
                 frame++;
+
                 if (frame > 3) {
+
                     frame = 0;
+
                 }
+            }
+
+            // toca passos
+            if (!andando) {
+
+                somPassos.setFramePosition(0);
+
+                somPassos.loop(Clip.LOOP_CONTINUOUSLY);
+
+                andando = true;
+
             }
         }
         repaint();
@@ -228,7 +301,13 @@ public class JogoExploracao extends JPanel implements KeyListener {
     public void keyReleased(KeyEvent e) {
         if (pausado) return;
         frame = 0;
-        repaint();
+
+     // para o som
+     somPassos.stop();
+
+     andando = false;
+
+     repaint();
     }
 
     @Override
