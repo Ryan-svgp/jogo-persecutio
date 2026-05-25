@@ -270,7 +270,7 @@ public class JogoExploracao extends JPanel implements KeyListener {
 
             contadorAnimacao++;
 
-            if (contadorAnimacao >= 5) {
+            if (contadorAnimacao >= 4) {
 
                 contadorAnimacao = 0;
 
