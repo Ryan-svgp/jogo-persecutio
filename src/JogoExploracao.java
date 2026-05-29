@@ -18,9 +18,6 @@ public class JogoExploracao extends JPanel implements KeyListener {
     Image imagemMapa;
     Image spriteSheet;
     Image luzMapa;
-    BufferedImage parede;
-    
-  
 
     // tamanho de cada frame
     final int TAMANHO = 32;
