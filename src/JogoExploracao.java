@@ -2,6 +2,7 @@ import javax.swing.*;
 import javax.sound.sampled.*;
 import java.io.File;
 import java.awt.*;
+import java.awt.image.BufferedImage;
 import java.awt.event.*;
 import java.util.ArrayList;
 
@@ -17,12 +18,17 @@ public class JogoExploracao extends JPanel implements KeyListener {
     Image imagemMapa;
     Image spriteSheet;
     Image luzMapa;
+    BufferedImage parede;
+    
+  
 
     // tamanho de cada frame
     final int TAMANHO = 32;
 
     // direção atual
     int direcao = 0;
+    
+    
 
     // frame atual da animação
     int frame = 0;
@@ -42,21 +48,15 @@ public class JogoExploracao extends JPanel implements KeyListener {
     int opcao = 0;
 
     public JogoExploracao() {
-        imagemMapa = new ImageIcon("img/quarto-clara-prototipo.png").getImage();
+        imagemMapa = new ImageIcon("img/quarto.png").getImage();
         spriteSheet = new ImageIcon("img/personagem.png").getImage();
         luzMapa = new ImageIcon("img/luz-sombra-temp.png").getImage();
-
-        paredes.add(new Rectangle(0, 0, 528, 48));
-        paredes.add(new Rectangle(0, 0, 48, 480));
-        paredes.add(new Rectangle(0, 432, 336, 48));
-        paredes.add(new Rectangle(432, 432, 96, 48));
-        paredes.add(new Rectangle(480, 0, 48, 480));
-        paredes.add(new Rectangle(338, 0, 20, 240));
-        paredes.add(new Rectangle(336, 196, 48, 48));
-        paredes.add(new Rectangle(460, 196, 48, 48));
+       
         
         mundoX = imagemMapa.getWidth(this) / 2;
         mundoY = imagemMapa.getHeight(this) / 2;
+        
+    
 
         try {
 
@@ -104,7 +104,7 @@ public class JogoExploracao extends JPanel implements KeyListener {
         addKeyListener(this);
         setFocusable(true);
     }
-
+    
     @Override
     public void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -120,19 +120,12 @@ public class JogoExploracao extends JPanel implements KeyListener {
         int cameraX = centroX - mundoX;
         int cameraY = centroY - mundoY;
         
+        int escala = 2;
         
-        g.setColor(Color.RED);
-        for (Rectangle parede : paredes) {
-            g.drawRect(
-                parede.x + cameraX,
-                parede.y + cameraY,
-                parede.width,
-                parede.height
-            );
-        }
-
         // mapa
-        g.drawImage(imagemMapa, cameraX, cameraY, this);
+        g.drawImage(imagemMapa, cameraX, cameraY, imagemMapa.getWidth(this)*escala, imagemMapa.getHeight(this)*escala, this);
+        
+      
 
         // coordenadas do frame na spritesheet
         int sx1 = frame * TAMANHO;
@@ -154,7 +147,7 @@ public class JogoExploracao extends JPanel implements KeyListener {
             this
         );
         
-        g.drawImage(luzMapa, cameraX, cameraY, this);
+        g.drawImage(luzMapa, cameraX, cameraY, luzMapa.getWidth(this)*escala, luzMapa.getHeight(this)*escala, this);
 
         // ==========================================
         // 2. DESENHO DO MENU DE PAUSA
