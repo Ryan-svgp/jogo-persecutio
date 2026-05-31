@@ -44,9 +44,9 @@ private void configurarLimitesMapa() { // AJUSTADO: Corrigida a digitação do n
         Rectangle banheiro = new Rectangle(banheiroX * escala, banheiroY * escala, banheiroLargura * escala, banheiroAltura * escala);
 
         // 3. PASSAGEM DA PORTA DO BANHEIRO (Ajustado número do comentário)
-        int portaX = 190;
+        int portaX = 195;
         int portaY = 340; 
-        int portaLargura = 25; 
+        int portaLargura = 35; 
         int portaAltura = 55;  
         Rectangle portaBanheiro = new Rectangle(portaX * escala, portaY * escala, portaLargura * escala, portaAltura * escala);
 

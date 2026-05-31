@@ -89,10 +89,160 @@ public class JogoExploracao extends JPanel implements KeyListener {
         setFocusable(true);
     }
 
-
- 
-
+    //
+    //Com as linhas da hitbox do mapa
+    //
     
+    @Override
+    public void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        Graphics2D g2d = (Graphics2D) g;
+
+        g2d.setColor(Color.BLACK);
+        g2d.fillRect(0, 0, getWidth(), getHeight());
+
+        // Centro REAL da tela
+        int centroX = getWidth() / 2;
+        int centroY = getHeight() / 2;
+
+        // Câmera
+        int cameraX = centroX - mundoX;
+        int cameraY = centroY - mundoY;
+
+        int escala = 2;
+
+        // 1. DESENHA O MAPA
+        g2d.drawImage(imagemMapa, cameraX, cameraY, imagemMapa.getWidth(this)*escala, imagemMapa.getHeight(this)*escala, this);
+
+        // ===================================================================
+        // SISTEMA VISUAL DE DEBUG (DESENHA AS CAIXAS DE COLISÃO)
+        // ==========================================
+        boolean modoDebug = true; // Mude para 'false' quando quiser esconder as caixas no jogo final
+        
+        if (modoDebug && sistemaColisao != null) {
+            // Guarda as configurações originais de linha do pincel
+            Stroke traçoOriginal = g2d.getStroke();
+            
+            // 1. Define uma linha verde um pouco mais espessa para as zonas caminháveis
+            g2d.setStroke(new BasicStroke(2));
+            g2d.setColor(Color.GREEN);
+            
+            for (Rectangle zona : sistemaColisao.getZonasCaminhaveis()) {
+                // Converte as coordenadas do mundo para a posição correta na tela baseada na câmera
+                int zonaTelaX = zona.x + cameraX;
+                int zonaTelaY = zona.y + cameraY;
+                
+                // Desenha a borda do retângulo
+                g2d.drawRect(zonaTelaX, zonaTelaY, zona.width, zona.height);
+            }
+            
+            // 2. Desenha a Hitbox atual do Personagem em Vermelho
+            g2d.setColor(Color.RED);
+            int jogadorTelaX = mundoX + cameraX;
+            int jogadorTelaY = mundoY + cameraY;
+            g2d.drawRect(jogadorTelaX, jogadorTelaY, Largura_Hitbox, Altura_Hitbox);
+            
+            // Restaura o traço padrão
+            g2d.setStroke(traçoOriginal);
+        }
+        // ===================================================================
+
+        // Coordenadas do frame na spritesheet
+        int sx1 = frame * TAMANHO;
+        int sy1 = direcao * TAMANHO;
+        int sx2 = sx1 + TAMANHO;
+        int sy2 = sy1 + TAMANHO;
+
+        // ==========================================
+        // 2. LÓGICA DO ESPELHO / REFLEXO
+        // ==========================================
+
+        int espelhoMundoX = 200; 
+        int espelhoMundoY = 530; 
+        int espelhoLargura = 100;
+        int espelhoAltura = 45;
+
+        int espelhoTelaX = cameraX + espelhoMundoX;
+        int espelhoTelaY = cameraY + espelhoMundoY;
+
+        g2d.setColor(new Color(100, 149, 237, 250));
+        g2d.fillRect(espelhoTelaX, espelhoTelaY, espelhoLargura, espelhoAltura);
+
+        if (mundoX + 28 > espelhoMundoX && mundoX - 28 < espelhoMundoX + espelhoLargura) {
+            int basePersonagemMundoY = mundoY + 28;
+            int baseEspelhoMundoY = espelhoMundoY + espelhoAltura;
+
+            if (basePersonagemMundoY >= baseEspelhoMundoY) {
+                int distanciaDoEspelho = basePersonagemMundoY - baseEspelhoMundoY;
+                int baseEspelhoTelaY = espelhoTelaY + espelhoAltura;
+                int reflexoTelaY_Bottom = baseEspelhoTelaY - (distanciaDoEspelho/5);
+                int reflexoTelaY_Top = reflexoTelaY_Bottom - 56; 
+
+                Shape clipOriginal = g2d.getClip();
+                g2d.setClip(espelhoTelaX, espelhoTelaY, espelhoLargura, espelhoAltura);
+                g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.5f));
+
+                int direcaoReflexo = direcao;
+                if (direcao == 3) direcaoReflexo = 0; 
+                else if (direcao == 0) direcaoReflexo = 3;
+
+                if (direcao == 1) direcaoReflexo = 2;
+                else if (direcao == 2) direcaoReflexo = 1;
+
+                int reflexoSy1 = direcaoReflexo * TAMANHO;
+                int reflexoSy2 = reflexoSy1 + TAMANHO;
+
+                g2d.drawImage(
+                        spriteSheet,
+                        centroX + 28, reflexoTelaY_Top,    
+                        centroX - 28, reflexoTelaY_Bottom, 
+                        sx1, reflexoSy1,                     
+                        sx2, reflexoSy2,                     
+                        this
+                );
+
+                g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1.0f));
+                g2d.setClip(clipOriginal);
+            }
+        }
+        // ==========================================
+
+        // 3. DESENHA O PERSONAGEM REAL (Sempre por cima do mapa e do espelho)
+        g2d.drawImage(
+                spriteSheet,
+                centroX - 28,
+                centroY - 28,
+                centroX + 28,
+                centroY + 28,
+                sx1,
+                sy1,
+                sx2,
+                sy2,
+                this
+        );
+
+        // 4. DESENHA A LUZ/SOMBRA DO MAPA
+        g2d.drawImage(luzMapa, cameraX, cameraY, luzMapa.getWidth(this)*escala, luzMapa.getHeight(this)*escala, this);
+
+        // ==========================================
+        // 5. DESENHO DO MENU DE PAUSA
+        // ==========================================
+        if (pausado) {
+            g2d.setColor(new Color(0, 0, 0, 180));
+            g2d.fillRect(0, 0, getWidth(), getHeight());
+
+            g2d.setColor(Color.WHITE);
+            g2d.setFont(new Font("Arial", Font.BOLD, 40));
+
+            g2d.drawString(opcao == 0 ? "-> VOLTAR" : "   VOLTAR", centroX - 100, centroY);
+            g2d.drawString(opcao == 1 ? "-> SAIR" : "   SAIR", centroX - 100, centroY + 60);
+        }
+    }
+    
+    //
+    // Sem as linhas da hi8tbox do mapa 
+    //
+    /* 
     @Override
     public void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -228,7 +378,7 @@ public class JogoExploracao extends JPanel implements KeyListener {
             g2d.drawString(opcao == 1 ? "-> SAIR" : "   SAIR", centroX - 100, centroY + 60);
         }
     }
-
+    */
     @Override
     public void keyPressed(KeyEvent e) {
         int tecla = e.getKeyCode();
