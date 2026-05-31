@@ -10,6 +10,12 @@ public class JogoExploracao extends JPanel implements KeyListener {
 
     ArrayList<Rectangle> paredes = new ArrayList<>();
 
+    // ==========================================
+    // IMPORTAÇÃO E ENCAPSULAMENTO DO NOVO COMPONENTE
+    // ==========================================
+
+    private GerenciadorColisao sistemaColisao;
+
     // Posição no mundo
     int mundoX = 0;
     int mundoY = 0;
@@ -21,6 +27,11 @@ public class JogoExploracao extends JPanel implements KeyListener {
 
     // Tamanho de cada frame
     final int TAMANHO = 32;
+
+    //configurações físicas da personagem; (Novo bloco inserirdo)
+    final int Largura_Hitbox = 36;
+    final int Altura_Hitbox = 36;
+    final int Velocidade = 6;
 
     // Direção atual
     int direcao = 0;
@@ -47,8 +58,12 @@ public class JogoExploracao extends JPanel implements KeyListener {
         spriteSheet = new ImageIcon("img/personagem.png").getImage();
         luzMapa = new ImageIcon("img/luz-sombra-temp.png").getImage();
 
-        mundoX = imagemMapa.getWidth(this) / 2;
-        mundoY = imagemMapa.getHeight(this) / 2;
+        //Instanciação do sistema de colisão Geométrica (Novo)
+        sistemaColisao = new GerenciadorColisao();
+        int escalaJogo = 2;//voltar se nescessario
+
+        mundoX = 75;//mudar para o que era
+        mundoY = (320 * escalaJogo) - Altura_Hitbox - 20;//voltar se nescessario
 
         try {
             AudioInputStream audio = AudioSystem.getAudioInputStream(new File("audio/passos.wav"));
@@ -74,6 +89,10 @@ public class JogoExploracao extends JPanel implements KeyListener {
         setFocusable(true);
     }
 
+
+ 
+
+    
     @Override
     public void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -175,6 +194,7 @@ public class JogoExploracao extends JPanel implements KeyListener {
                 g2d.setClip(clipOriginal);
             }
         }
+         
         // ==========================================
 
         // 3. DESENHA O PERSONAGEM REAL (Sempre por cima do mapa e do espelho)
@@ -230,52 +250,44 @@ public class JogoExploracao extends JPanel implements KeyListener {
 
         // DIREITA
         if (tecla == KeyEvent.VK_RIGHT || tecla == KeyEvent.VK_D) {
-            int novoX = mundoX + 5;
-            Rectangle futuro = new Rectangle(novoX, mundoY, 32, 32);
-            boolean bateu = false;
-            for (Rectangle parede : paredes) {
-                if (futuro.intersects(parede)) bateu = true;
+            int novoX = mundoX + Velocidade;
+            // Valida se a hitbox do personagem estará contida em uma zona caminhável
+            if (sistemaColisao.verificarPosicaoValida(novoX, mundoY, Largura_Hitbox, Altura_Hitbox)) {
+                mundoX = novoX;
             }
-            if (!bateu) mundoX = novoX;
             direcao = 1;
             movendo = true;
         }
 
         // ESQUERDA
         if (tecla == KeyEvent.VK_LEFT || tecla == KeyEvent.VK_A) {
-            int novoX = mundoX - 5;
-            Rectangle futuro = new Rectangle(novoX, mundoY, 32, 32);
-            boolean bateu = false;
-            for (Rectangle parede : paredes) {
-                if (futuro.intersects(parede)) bateu = true;
+            int novoX = mundoX - Velocidade;
+            // Valida se a hitbox do personagem estará contida em uma zona caminhável
+            if (sistemaColisao.verificarPosicaoValida(novoX, mundoY, Largura_Hitbox, Altura_Hitbox)) {
+                mundoX = novoX;
             }
-            if (!bateu) mundoX = novoX;
             direcao = 2;
             movendo = true;
         }
 
         // CIMA
         if (tecla == KeyEvent.VK_UP || tecla == KeyEvent.VK_W) {
-            int novoY = mundoY - 5;
-            Rectangle futuro = new Rectangle(mundoX, novoY, 32, 32);
-            boolean bateu = false;
-            for (Rectangle parede : paredes) {
-                if (futuro.intersects(parede)) bateu = true;
+            int novoY = mundoY - Velocidade;
+            // Valida se a hitbox do personagem estará contida em uma zona caminhável
+            if (sistemaColisao.verificarPosicaoValida(mundoX, novoY, Largura_Hitbox, Altura_Hitbox)) {
+                mundoY = novoY;
             }
-            if (!bateu) mundoY = novoY;
             direcao = 3;
             movendo = true;
         }
 
         // BAIXO
         if (tecla == KeyEvent.VK_DOWN || tecla == KeyEvent.VK_S) {
-            int novoY = mundoY + 5;
-            Rectangle futuro = new Rectangle(mundoX, novoY, 32, 32);
-            boolean bateu = false;
-            for (Rectangle parede : paredes) {
-                if (futuro.intersects(parede)) bateu = true;
+            int novoY = mundoY + Velocidade;
+            // Valida se a hitbox do personagem estará contida em uma zona caminhável
+            if (sistemaColisao.verificarPosicaoValida(mundoX, novoY, Largura_Hitbox, Altura_Hitbox)) {
+                mundoY = novoY;
             }
-            if (!bateu) mundoY = novoY;
             direcao = 0;
             movendo = true;
         }
