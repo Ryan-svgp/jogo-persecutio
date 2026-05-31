@@ -14,6 +14,9 @@ public class JogoExploracao extends JPanel implements KeyListener {
     boolean mundoUmbra = false;
     boolean mostrarHitboxes = false; // Começa falso para parecer um jogo de verdade. Aperte 'H' para testar.
 
+    // 1.0f significa 100% visível. Vai diminuindo até 0.0f (invisível)
+    float opacidadeTutorial = 1.0f;
+
     // Variáveis que controlam o enredo da história
     int missaoAtual = 1;
     int documentosAchados = 1;
@@ -61,6 +64,8 @@ public class JogoExploracao extends JPanel implements KeyListener {
     Image imagemMapa;
     Image spriteSheet;
     Image luzMapa;
+    Image imgNPC;
+    Image imgEnfermeira;
     Clip somPassos;
     Clip ambiente;
 
@@ -74,6 +79,8 @@ public class JogoExploracao extends JPanel implements KeyListener {
         imagemMapa = new ImageIcon("img/quarto.png").getImage();
         spriteSheet = new ImageIcon("img/personagem.png").getImage();
         luzMapa = new ImageIcon("img/luz-sombra-temp.png").getImage();
+        imgNPC = new ImageIcon("img/npc.png").getImage();
+        imgEnfermeira = new ImageIcon("img/enfermeira.png").getImage();
 
         // Inicializa as nossas classes personalizadas
         sistemaColisao = new GerenciadorColisao();
@@ -131,6 +138,28 @@ public class JogoExploracao extends JPanel implements KeyListener {
         // 1. Pinta a imagem do chão do mapa
         g2d.drawImage(imagemMapa, cameraX, cameraY, imagemMapa.getWidth(this)*escala, imagemMapa.getHeight(this)*escala, this);
 
+        // ==========================================
+        // DESENHA OS NPCs (SÓ NO MUNDO REAL)
+        // ==========================================
+        // Fica aqui em cima para que a sombra escureça os NPCs também!
+        if (!mundoUmbra) {
+            // Desenha o chão do hospital
+            g2d.drawImage(imagemMapa, cameraX, cameraY, imagemMapa.getWidth(this)*escala, imagemMapa.getHeight(this)*escala, this);
+
+            // POSIÇÃO DO PACIENTE:
+            if (imgNPC != null) {
+                int npcX = 1600; // Mude para mover o desenho para os lados
+                int npcY = 280;  // Mude para mover o desenho para cima/baixo
+                g2d.drawImage(imgNPC, cameraX + npcX, cameraY + npcY, 150, 170, this);
+            }
+
+            //  POSIÇÃO DA ENFERMEIRA:
+            if (imgEnfermeira != null) {
+                int enfermeiraX = 1230; // Mude para mover o desenho para os lados
+                int enfermeiraY = 230;  // Mude para mover o desenho para cima/baixo
+                g2d.drawImage(imgEnfermeira, cameraX + enfermeiraX, cameraY + enfermeiraY, 50, 70, this);
+            }
+        }
         // 2. Se a Clara tomou a pílula, pinta um filtro vermelho de "Pesadelo" por cima da tela
         if (mundoUmbra) {
             g2d.setColor(new Color(150, 0, 0, 70));
@@ -193,6 +222,24 @@ public class JogoExploracao extends JPanel implements KeyListener {
         g2d.drawImage(spriteSheet, centroX - 28, centroY - 28, centroX + 28, centroY + 28, sx1, sy1, sx2, sy2, this);
         // 6. Pinta a imagem preta de luz e sombra (efeito de escuridão) por cima de tudo
         g2d.drawImage(luzMapa, cameraX, cameraY, luzMapa.getWidth(this)*escala, luzMapa.getHeight(this)*escala, this);
+
+        // ==========================================
+        // TUTORIAL SUTIL NO CHÃO DO QUARTO
+        // ==========================================
+        if (opacidadeTutorial > 0.0f) {
+            // Aplica a transparência ao pincel do Java
+            g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, opacidadeTutorial));
+
+            g2d.setColor(new Color(200, 200, 200)); // Cinza claro
+            g2d.setFont(new Font("Serif", Font.ITALIC, 18)); // Fonte clássica de terror
+
+            // Desenha os textos um pouco abaixo da personagem
+            g2d.drawString("Use as setas ou W A S D para andar...", centroX - 140, centroY + 120);
+            g2d.drawString("Pressione [E] para investigar...", centroX - 110, centroY + 150);
+
+            // Restaura o pincel para 100% visível para não afetar o resto do jogo
+            g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1.0f));
+        }
 
         // ===============================================
         // TELAS DE POP-UP (Telas que abrem no meio do jogo)
@@ -459,6 +506,14 @@ public class JogoExploracao extends JPanel implements KeyListener {
                 somPassos.setFramePosition(0);
                 somPassos.loop(Clip.LOOP_CONTINUOUSLY);
                 andando = true;
+            }
+            // Retira 5% da opacidade a cada "passo" do teclado
+            if (opacidadeTutorial > 0.0f) {
+                opacidadeTutorial -= 0.05f;
+                // Impede que o número fique negativo
+                if (opacidadeTutorial < 0.0f) {
+                    opacidadeTutorial = 0.0f;
+                }
             }
         }
         repaint(); // Desenha a tela novamente com a Clara na nova posição
