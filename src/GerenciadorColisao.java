@@ -3,125 +3,99 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class GerenciadorColisao {
-    // Lista privada de áreas possíveis de se mover
-    private final List<Rectangle> zonasCaminhaveis;
+    // Listas que guardam os "quadrados" invisíveis do mapa
+    private final List<Rectangle> zonasCaminhaveis; // Onde pode andar no Mundo Real
+    private final List<Rectangle> zonasQuarto;      // Onde pode andar no Mundo Umbra (preso no quarto)
+    private final List<Rectangle> obstaculos;       // Móveis e paredes onde o jogador bate e para
 
     public GerenciadorColisao() {
+        // Inicializando as listas vazias
         this.zonasCaminhaveis = new ArrayList<>();
-        configurarLimitesMapa(); // AJUSTADO: Nome unificado com o método abaixo
+        this.zonasQuarto = new ArrayList<>();
+        this.obstaculos = new ArrayList<>();
+
+        // Chamando as funções que vão preencher essas listas
+        configurarLimitesMapa();
+        configurarObstaculos();
     }
 
-    /*
-    * Define os retângulos correspondentes ao chão que pode se mover
-    * O multiplicador 'escala' garante que acompanhe o tamanho da tela
-    */
-private void configurarLimitesMapa() { // AJUSTADO: Corrigida a digitação do nome do método
-        int escala = 2;
+    // Função que desenha o "chão" por onde o jogador pode andar
+    private void configurarLimitesMapa() {
+        int escala = 2; // O jogo é ampliado em 2x, então multiplicamos as colisões por 2 também
 
-        // ==========================================
-        // 1. QUARTO FATIADO (Substituído o bloco único para reter o personagem)
-        // ==========================================
-        // Parte Esquerda: Vai da parede até a quina esquerda do banheiro (largura reduzida para 145)
-        int quartoEsquerdoX = 25;
-        int quartoEsquerdoY = 275;
-        int quartoEsquerdoLargura = 145; 
-        int quartoEsquerdoAltura = 205;
-        Rectangle quartoEsquerdo = new Rectangle(quartoEsquerdoX * escala, quartoEsquerdoY * escala, quartoEsquerdoLargura * escala, quartoEsquerdoAltura * escala);
+        // --- 1. ÁREAS DO QUARTO E BANHEIRO ---
+        Rectangle quartoEsquerdo = new Rectangle(25 * escala, 275 * escala, 145 * escala, 205 * escala);
+        Rectangle quartoBaixo = new Rectangle(150 * escala, 375 * escala, 100 * escala, 105 * escala);
+        Rectangle banheiro = new Rectangle(170 * escala, 270 * escala, 85 * escala, 100 * escala);
+        Rectangle portaBanheiro = new Rectangle(190 * escala, 340 * escala, 25 * escala, 55 * escala);
 
-        // Parte Baixo: Fica logo abaixo do chão do banheiro (começa em X=170 e desce em Y=375)
-        int quartoBaixoX = 150;
-        int quartoBaixoY = 375;
-        int quartoBaixoLargura = 100; 
-        int quartoBaixoAltura = 105;
-        Rectangle quartoBaixo = new Rectangle(quartoBaixoX * escala, quartoBaixoY * escala, quartoBaixoLargura * escala, quartoBaixoAltura * escala);
-        // ==========================================
+        // --- 2. ÁREAS DO CORREDOR E RECEPÇÃO ---
+        Rectangle corredorHorizontal = new Rectangle(28 * escala, 495 * escala, 805 * escala, 90 * escala);
+        Rectangle corredorVertical = new Rectangle(745 * escala, 260 * escala, 85 * escala, 270 * escala);
+        Rectangle recepcao = new Rectangle(570 * escala, 48 * escala, 420 * escala, 200 * escala);
 
-        // 2. BANHEIRO 
-        int banheiroX = 170;
-        int banheiroY = 270;
-        int banheiroLargura = 85;
-        int banheiroAltura = 100; 
-        Rectangle banheiro = new Rectangle(banheiroX * escala, banheiroY * escala, banheiroLargura * escala, banheiroAltura * escala);
+        // --- 3. ÁREAS DAS PORTAS DE CONEXÃO ---
+        Rectangle portaQuarto = new Rectangle(195 * escala, 450 * escala, 35 * escala, 70 * escala);
+        Rectangle portaRecepcao = new Rectangle(773 * escala, 220 * escala, 35 * escala, 70 * escala);
 
-        // 3. PASSAGEM DA PORTA DO BANHEIRO (Ajustado número do comentário)
-        int portaX = 195;
-        int portaY = 340; 
-        int portaLargura = 35; 
-        int portaAltura = 55;  
-        Rectangle portaBanheiro = new Rectangle(portaX * escala, portaY * escala, portaLargura * escala, portaAltura * escala);
-
-        // 4. CORREDOR HORIZONTAL (Ajustado número do comentário)
-        int corrHorizX = 28;
-        int corrHorizY = 495;
-        int corrHorizLargura = 805;
-        int corrHorizAltura = 90;
-        Rectangle corredorHorizontal = new Rectangle(corrHorizX * escala, corrHorizY * escala, corrHorizLargura * escala, corrHorizAltura * escala);
-
-        // 5. CORREDOR VERTICAL (Ajustado número do comentário)
-        int corrVertX = 745;
-        int corrVertY = 260;
-        int corrVertLargura = 85;
-        int corrVertAltura = 270;
-        Rectangle corredorVertical = new Rectangle(corrVertX * escala, corrVertY * escala, corrVertLargura * escala, corrVertAltura * escala);
-
-        // 6. RECEPÇÃO (Ajustado número do comentário)
-        int recepcaoX = 570;
-        int recepcaoY = 48;
-        int recepcaoLargura = 420;
-        int recepcaoAltura = 200;
-        Rectangle recepcao = new Rectangle(recepcaoX * escala, recepcaoY * escala, recepcaoLargura * escala, recepcaoAltura * escala);
-
-        // ==========================================
-        // NOVAS PORTAS ADICIONADAS
-        // ==========================================
-
-        // 1.1 PORTA DO QUARTO (Conecta a parte de baixo do quarto ao corredor horizontal)
-        int portaQuartoX = 195;       
-        int portaQuartoY = 450;       
-        int portaQuartoLargura = 35;  
-        int portaQuartoAltura = 70;   
-        Rectangle portaQuarto = new Rectangle(portaQuartoX * escala, portaQuartoY * escala, portaQuartoLargura * escala, portaQuartoAltura * escala);
-
-        // 5.1 PORTA DA RECEPÇÃO (Conecta a recepção ao topo do corredor vertical)
-        int portaRecepcaoX = 773;      
-        int portaRecepcaoY = 220;      
-        int portaRecepcaoLargura = 35; 
-        int portaRecepcaoAltura = 70;  
-        Rectangle portaRecepcao = new Rectangle(portaRecepcaoX * escala, portaRecepcaoY * escala, portaRecepcaoLargura * escala, portaRecepcaoAltura * escala);
-
-        // ==========================================
-
-        // Adiciona todos os elementos na lista (Substituído o quarto antigo pelas duas partes novas)
+        // Adiciona TUDO na lista do Mundo Real (A Clara pode andar no mapa todo)
         zonasCaminhaveis.add(quartoEsquerdo);
         zonasCaminhaveis.add(quartoBaixo);
         zonasCaminhaveis.add(banheiro);
-        zonasCaminhaveis.add(portaBanheiro); 
+        zonasCaminhaveis.add(portaBanheiro);
         zonasCaminhaveis.add(corredorHorizontal);
         zonasCaminhaveis.add(corredorVertical);
         zonasCaminhaveis.add(recepcao);
-        
-        // Adicionando as novas pontes de colisão
         zonasCaminhaveis.add(portaQuarto);
         zonasCaminhaveis.add(portaRecepcao);
+
+        // Adiciona SÓ O QUARTO na lista do Mundo Umbra (A Clara não consegue sair daqui até destrancar)
+        zonasQuarto.add(quartoEsquerdo);
+        zonasQuarto.add(quartoBaixo);
+        zonasQuarto.add(banheiro);
+        zonasQuarto.add(portaBanheiro);
     }
 
-    /**
-     * Valida se a próxima posição que o personagem quer ir está totalmente contida
-     * dentro de alguma das formas geométricas permitidas.
-     */
-    public boolean verificarPosicaoValida(int proximoX, int proximoY, int largura, int altura) {
+    // Função que cria os objetos sólidos (mesas, cadeiras, sofás)
+    private void configurarObstaculos() {
+        int escala = 2;
+
+        // Exemplo: A Mesa da Enfermeira.
+        // Se a hitbox da Clara encostar nisso, ela para de andar.
+        Rectangle mesaEnfermeira = new Rectangle(600 * escala, 100 * escala, 120 * escala, 50 * escala);
+
+        // Adiciona a mesa na lista de bloqueios
+        obstaculos.add(mesaEnfermeira);
+    }
+
+    // O "Segurança" do jogo: Ele diz se o próximo passo da Clara é permitido ou não
+    public boolean verificarPosicaoValida(int proximoX, int proximoY, int largura, int altura, boolean mundoUmbra, boolean portaUmbraDestrancada) {
+        // Cria um quadrado imaginário para onde a Clara QUER ir
         Rectangle hitbox = new Rectangle(proximoX, proximoY, largura, altura);
 
-        // Se a hitbox estiver contida dentro de qualquer uma das zonas, o movimento é válido
-        for (Rectangle zona : zonasCaminhaveis) {
-            if (zona.contains(hitbox)) {
-                return true;
+        // 1º REGRA: Verifica se ela está batendo a cara em um móvel (obstáculo)
+        for (Rectangle obs : obstaculos) {
+            if (obs.intersects(hitbox)) {
+                return false; // Se bater no móvel, bloqueia o movimento!
             }
         }
-        return false; // Retorna false se o jogador tentar sair do formato do mapa
+
+        // 2º REGRA: Define qual "chão" ela pode usar.
+        // Se estiver no Umbra e a porta estiver trancada, usa a lista 'zonasQuarto'.
+        // Caso contrário, usa a lista do mapa todo ('zonasCaminhaveis').
+        List<Rectangle> zonasAtuais = (mundoUmbra && !portaUmbraDestrancada) ? zonasQuarto : zonasCaminhaveis;
+
+        // Verifica se a Clara está 100% dentro do chão permitido
+        for (Rectangle zona : zonasAtuais) {
+            if (zona.contains(hitbox)) {
+                return true; // Se estiver no chão verde, libera o passo!
+            }
+        }
+        return false; // Se tentar sair do chão verde, bloqueia o movimento.
     }
 
-    public List<Rectangle> getZonasCaminhaveis() {
-        return zonasCaminhaveis;
-    }
+    // Métodos para enviar essas listas para quem quiser ler (como o nosso GerenciadorDebug)
+    public List<Rectangle> getZonasCaminhaveis() { return zonasCaminhaveis; }
+    public List<Rectangle> getZonasQuarto() { return zonasQuarto; }
+    public List<Rectangle> getObstaculos() { return obstaculos; }
 }
