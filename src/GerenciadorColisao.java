@@ -27,7 +27,7 @@ public class GerenciadorColisao {
         Rectangle quartoEsquerdo = new Rectangle(25 * escala, 275 * escala, 145 * escala, 205 * escala);
         Rectangle quartoBaixo = new Rectangle(150 * escala, 375 * escala, 100 * escala, 105 * escala);
         Rectangle banheiro = new Rectangle(170 * escala, 270 * escala, 85 * escala, 100 * escala);
-        Rectangle portaBanheiro = new Rectangle(190 * escala, 340 * escala, 25 * escala, 55 * escala);
+        Rectangle portaBanheiro = new Rectangle(190 * escala, 340 * escala, 40 * escala, 55 * escala);
 
         // --- 2. ÁREAS DO CORREDOR E RECEPÇÃO ---
         Rectangle corredorHorizontal = new Rectangle(28 * escala, 495 * escala, 805 * escala, 90 * escala);
