@@ -2,97 +2,116 @@ import javax.swing.*;
 import javax.sound.sampled.*;
 import java.io.File;
 import java.awt.*;
-import java.awt.image.BufferedImage;
 import java.awt.event.*;
-import java.util.ArrayList;
 
 public class JogoExploracao extends JPanel implements KeyListener {
 
-    ArrayList<Rectangle> paredes = new ArrayList<>();
-
-    // ==========================================
-    // IMPORTAÇÃO E ENCAPSULAMENTO DO NOVO COMPONENTE
-    // ==========================================
-
+    // Classes auxiliares criadas por vocês
     private GerenciadorColisao sistemaColisao;
+    private GerenciadorDebug sistemaDebug;
 
-    // Posição no mundo
-    int mundoX = 0;
-    int mundoY = 0;
+    // Variáveis que controlam "em que mundo" o jogador está e o modo de teste
+    boolean mundoUmbra = false;
+    boolean mostrarHitboxes = false; // Começa falso para parecer um jogo de verdade. Aperte 'H' para testar.
 
-    // Mapa e spritesheet
+    // Variáveis que controlam o enredo da história
+    int missaoAtual = 1;
+    int documentosAchados = 1;
+    int partesObjetoCircular = 0; // Quantas peças a Clara já pegou
+
+    // Variáveis booleanas (Verdadeiro ou Falso) que funcionam como "chaves" do jogo
+    boolean portaUmbraDestrancada = false;
+    boolean sabePalavraMagica = false;
+    String mensagemAviso = ""; // Texto de aviso que surge embaixo do boneco
+
+    // Controles para o jogador não conseguir pegar a mesma peça duas vezes
+    boolean pegouPecaEspelho = false;
+    boolean pegouPecaGaveta = false;
+    boolean pegouPecaNpc = false;
+    boolean leuDocumentoRecepcao = false;
+
+    // Controlam se o jogo deve pausar a tela para mostrar uma imagem de perto (puzzle)
+    boolean mostrandoPuzzlePorta = false;
+    boolean mostrandoEspelho = false;
+
+    // Definição das coordenadas (X e Y) de todos os objetos interativos do jogo
+    public Rectangle areaPilula = new Rectangle(115, 560, 50, 50);
+    public Rectangle areaCama = new Rectangle(50, 560, 80, 90);
+    public Rectangle areaPortaUmbra = new Rectangle(390, 890, 80, 60);
+    public Rectangle areaEspelho = new Rectangle(200, 530, 100, 55);
+    public Rectangle areaGaveta = new Rectangle(450, 800, 50, 50);
+    public Rectangle areaNPC = new Rectangle(1600, 300, 50, 50);
+    public Rectangle areaDocumento = new Rectangle(1290, 200, 40, 40);
+
+    // Física e tamanho da personagem (Maria Clara)
+    public int mundoX = 0; // Posição X dela no mundo
+    public int mundoY = 0; // Posição Y dela no mundo
+    final int TAMANHO = 32; // Tamanho do recorte da imagem do boneco
+    public final int Largura_Hitbox = 36;
+    public final int Altura_Hitbox = 36;
+    final int Velocidade = 6; // Velocidade que a boneca anda
+
+    // Lógica da Animação
+    int direcao = 0; // 0=Baixo, 1=Direita, 2=Esquerda, 3=Cima
+    int frame = 0; // Qual perna está mexendo
+    int contadorAnimacao = 0;
+    boolean andando = false;
+
+    // Imagens e Áudios
     Image imagemMapa;
     Image spriteSheet;
     Image luzMapa;
-
-    // Tamanho de cada frame
-    final int TAMANHO = 32;
-
-    //configurações físicas da personagem; (Novo bloco inserirdo)
-    final int Largura_Hitbox = 36;
-    final int Altura_Hitbox = 36;
-    final int Velocidade = 6;
-
-    // Direção atual
-    int direcao = 0;
-
-    // Frame atual da animação
-    int frame = 0;
-
-    // Contador para controlar velocidade da animação
-    int contadorAnimacao = 0;
-
-    // Som dos passos e ambiente
     Clip somPassos;
-    boolean andando = false;
     Clip ambiente;
 
-    // ==========================================
-    // 1. VARIÁVEIS DA PAUSA
-    // ==========================================
+    // Sistema de Pausa do Jogo (Tecla ESC)
     boolean pausado = false;
     int opcao = 0;
 
+    // CONSTRUTOR: Roda uma única vez quando a tela do jogo é aberta
     public JogoExploracao() {
+        // Carrega as imagens do HD para a memória
         imagemMapa = new ImageIcon("img/quarto.png").getImage();
         spriteSheet = new ImageIcon("img/personagem.png").getImage();
         luzMapa = new ImageIcon("img/luz-sombra-temp.png").getImage();
 
-        //Instanciação do sistema de colisão Geométrica (Novo)
+        // Inicializa as nossas classes personalizadas
         sistemaColisao = new GerenciadorColisao();
-        int escalaJogo = 2;//voltar se nescessario
+        sistemaDebug = new GerenciadorDebug();
 
-        mundoX = 75;//mudar para o que era
-        mundoY = (320 * escalaJogo) - Altura_Hitbox - 20;//voltar se nescessario
+        int escalaJogo = 2; // Mapa é ampliado 2x
 
+        // Coloca a Maria Clara na posição inicial (onde o jogo começa)
+        mundoX = 75;
+        mundoY = (320 * escalaJogo) - Altura_Hitbox - 20;
+
+        // Tenta carregar os áudios e tocar a música de fundo em repetição
         try {
             AudioInputStream audio = AudioSystem.getAudioInputStream(new File("audio/passos.wav"));
             somPassos = AudioSystem.getClip();
             somPassos.open(audio);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        } catch (Exception e) { e.printStackTrace(); }
 
         try {
             AudioInputStream audio = AudioSystem.getAudioInputStream(new File("audio/ambiente.wav"));
             ambiente = AudioSystem.getClip();
             ambiente.open(audio);
-
             FloatControl volume = (FloatControl) ambiente.getControl(FloatControl.Type.MASTER_GAIN);
-            volume.setValue(-15.0f);
+            volume.setValue(-15.0f); // Abaixa o volume para não estourar o ouvido
             ambiente.loop(Clip.LOOP_CONTINUOUSLY);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        } catch (Exception e) { e.printStackTrace(); }
 
+        // Ativa a escuta das teclas do teclado para este painel
         addKeyListener(this);
         setFocusable(true);
     }
 
-    //
-    //Com as linhas da hitbox do mapa
-    //
-    
+    // Permite que o GerenciadorDebug pegue as colisões para desenhar as linhas
+    public GerenciadorColisao getSistemaColisao() {
+        return sistemaColisao;
+    }
+
+    // O "Pincel" do Java: Roda o tempo todo, redesenhando a tela a 60 frames por segundo
     @Override
     public void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -101,376 +120,360 @@ public class JogoExploracao extends JPanel implements KeyListener {
         g2d.setColor(Color.BLACK);
         g2d.fillRect(0, 0, getWidth(), getHeight());
 
-        // Centro REAL da tela
+        // LÓGICA DE CÂMERA: Mantém o boneco no meio da tela (centroX, centroY)
+        // E move o mapa inteiro (cameraX, cameraY) no sentido contrário aos passos da Clara
         int centroX = getWidth() / 2;
         int centroY = getHeight() / 2;
-
-        // Câmera
         int cameraX = centroX - mundoX;
         int cameraY = centroY - mundoY;
-
         int escala = 2;
 
-        // 1. DESENHA O MAPA
+        // 1. Pinta a imagem do chão do mapa
         g2d.drawImage(imagemMapa, cameraX, cameraY, imagemMapa.getWidth(this)*escala, imagemMapa.getHeight(this)*escala, this);
 
-        // ===================================================================
-        // SISTEMA VISUAL DE DEBUG (DESENHA AS CAIXAS DE COLISÃO)
-        // ==========================================
-        boolean modoDebug = true; // Mude para 'false' quando quiser esconder as caixas no jogo final
-        
-        if (modoDebug && sistemaColisao != null) {
-            // Guarda as configurações originais de linha do pincel
-            Stroke traçoOriginal = g2d.getStroke();
-            
-            // 1. Define uma linha verde um pouco mais espessa para as zonas caminháveis
-            g2d.setStroke(new BasicStroke(2));
-            g2d.setColor(Color.GREEN);
-            
-            for (Rectangle zona : sistemaColisao.getZonasCaminhaveis()) {
-                // Converte as coordenadas do mundo para a posição correta na tela baseada na câmera
-                int zonaTelaX = zona.x + cameraX;
-                int zonaTelaY = zona.y + cameraY;
-                
-                // Desenha a borda do retângulo
-                g2d.drawRect(zonaTelaX, zonaTelaY, zona.width, zona.height);
+        // 2. Se a Clara tomou a pílula, pinta um filtro vermelho de "Pesadelo" por cima da tela
+        if (mundoUmbra) {
+            g2d.setColor(new Color(150, 0, 0, 70));
+            g2d.fillRect(0, 0, getWidth(), getHeight());
+        }
+
+        // 3. Se apertou a tecla 'H', chama a classe que desenha as caixas coloridas
+        if (mostrarHitboxes) {
+            sistemaDebug.desenharHitboxes(g2d, this, cameraX, cameraY);
+        }
+
+        // Faz o cálculo de qual quadradinho da imagem do boneco deve ser desenhado agora
+        int sx1 = frame * TAMANHO;
+        int sy1 = direcao * TAMANHO;
+        int sx2 = sx1 + TAMANHO;
+        int sy2 = sy1 + TAMANHO;
+
+        // 4. LÓGICA DO ESPELHO (SÓ APARECE NO UMBRA)
+        if (mundoUmbra) {
+            int espelhoTelaX = cameraX + areaEspelho.x;
+            int espelhoTelaY = cameraY + areaEspelho.y;
+
+            // Se a Maria Clara pisar "na frente" do espelho invisível, desenha o reflexo dela!
+            if (mundoX + 28 > areaEspelho.x && mundoX - 28 < areaEspelho.x + areaEspelho.width) {
+                int basePersonagemMundoY = mundoY + 28;
+                int baseEspelhoMundoY = areaEspelho.y + areaEspelho.height;
+
+                if (basePersonagemMundoY >= baseEspelhoMundoY) {
+                    int distanciaDoEspelho = basePersonagemMundoY - baseEspelhoMundoY;
+                    int baseEspelhoTelaY = espelhoTelaY + areaEspelho.height;
+                    int reflexoTelaY_Bottom = baseEspelhoTelaY - (distanciaDoEspelho/5);
+                    int reflexoTelaY_Top = reflexoTelaY_Bottom - 56;
+
+                    Shape clipOriginal = g2d.getClip();
+                    g2d.setClip(espelhoTelaX, espelhoTelaY, areaEspelho.width, areaEspelho.height);
+
+                    // AlphaComposite deixa o boneco do reflexo transparente (efeito de vidro/fantasma)
+                    g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.5f));
+
+                    // Inverte o boneco (se eu olho pra direita, meu reflexo no espelho olha pra esquerda)
+                    int direcaoReflexo = direcao;
+                    if (direcao == 3) direcaoReflexo = 0;
+                    else if (direcao == 0) direcaoReflexo = 3;
+                    if (direcao == 1) direcaoReflexo = 2;
+                    else if (direcao == 2) direcaoReflexo = 1;
+
+                    int reflexoSy1 = direcaoReflexo * TAMANHO;
+                    int reflexoSy2 = reflexoSy1 + TAMANHO;
+
+                    // Desenha o boneco do reflexo
+                    g2d.drawImage(spriteSheet, centroX + 28, reflexoTelaY_Top, centroX - 28, reflexoTelaY_Bottom, sx1, reflexoSy1, sx2, reflexoSy2, this);
+
+                    g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1.0f));
+                    g2d.setClip(clipOriginal);
+                }
             }
-            
-            // 2. Desenha a Hitbox atual do Personagem em Vermelho
+        }
+
+        // 5. Pinta a Maria Clara real no centro da tela
+        g2d.drawImage(spriteSheet, centroX - 28, centroY - 28, centroX + 28, centroY + 28, sx1, sy1, sx2, sy2, this);
+        // 6. Pinta a imagem preta de luz e sombra (efeito de escuridão) por cima de tudo
+        g2d.drawImage(luzMapa, cameraX, cameraY, luzMapa.getWidth(this)*escala, luzMapa.getHeight(this)*escala, this);
+
+        // ===============================================
+        // TELAS DE POP-UP (Telas que abrem no meio do jogo)
+        // ===============================================
+
+        // TELA DO ENIGMA DO ESPELHO (Imagem do relógio)
+        if (mostrandoEspelho) {
+            g2d.setColor(new Color(0, 0, 0, 220)); // Fundo preto transparente
+            g2d.fillRect(0, 0, getWidth(), getHeight());
+
+            int imgTamanhoX = 500;
+            int imgTamanhoY = 400;
+            int px = centroX - (imgTamanhoX / 2);
+            int py = centroY - (imgTamanhoY / 2);
+
+            g2d.setColor(Color.DARK_GRAY);
+            g2d.fillRect(px, py, imgTamanhoX, imgTamanhoY);
+            g2d.setColor(Color.WHITE);
+            g2d.drawRect(px, py, imgTamanhoX, imgTamanhoY);
+            g2d.setFont(new Font("Arial", Font.BOLD, 18));
+            g2d.drawString("[IMAGEM DO RELÓGIO NO ESPELHO]", px + 50, py + 150);
             g2d.setColor(Color.RED);
-            int jogadorTelaX = mundoX + cameraX;
-            int jogadorTelaY = mundoY + cameraY;
-            g2d.drawRect(jogadorTelaX, jogadorTelaY, Largura_Hitbox, Altura_Hitbox);
-            
-            // Restaura o traço padrão
-            g2d.setStroke(traçoOriginal);
+            g2d.setFont(new Font("Arial", Font.BOLD, 24));
+            g2d.drawString("O relógio marca 04:10", px + 80, py + 200);
+
+            g2d.setColor(Color.WHITE);
+            g2d.setFont(new Font("Arial", Font.BOLD, 14));
+            g2d.drawString("Pressione [ESC] ou [E] para fechar", centroX - 120, py + imgTamanhoY + 40);
+            return; // O return faz com que ele pule tudo daqui para baixo (como os textos do boneco)
         }
-        // ===================================================================
 
-        // Coordenadas do frame na spritesheet
-        int sx1 = frame * TAMANHO;
-        int sy1 = direcao * TAMANHO;
-        int sx2 = sx1 + TAMANHO;
-        int sy2 = sy1 + TAMANHO;
+        // TELA DO ENIGMA DA PORTA TRANCADA
+        if (mostrandoPuzzlePorta) {
+            g2d.setColor(new Color(0, 0, 0, 220));
+            g2d.fillRect(0, 0, getWidth(), getHeight());
+            int puzzleTamanho = 400;
+            int px = centroX - (puzzleTamanho / 2);
+            int py = centroY - (puzzleTamanho / 2);
 
-        // ==========================================
-        // 2. LÓGICA DO ESPELHO / REFLEXO
-        // ==========================================
+            // Se pegou as 3 peças, desenha a tela final (meia de bebê)
+            if (partesObjetoCircular == 3) {
+                g2d.setColor(Color.WHITE);
+                g2d.drawRect(px, py, puzzleTamanho, puzzleTamanho);
+                g2d.drawString("[IMAGEM DA MEIA DE BEBÊ]", px + 40, py + 200);
+                g2d.setColor(Color.GREEN);
+                g2d.setFont(new Font("Arial", Font.BOLD, 20));
+                g2d.drawString("Porta Destrancada!", centroX - 80, py + puzzleTamanho + 40);
+            } else {
+                // Se faltam peças, desenha o buraco e as peças que ela já pegou
+                g2d.setColor(Color.GRAY);
+                g2d.fillRect(px, py, puzzleTamanho, puzzleTamanho);
+                g2d.setColor(Color.WHITE);
+                g2d.drawString("[BURACO VAZIO DA PORTA]", px + 60, py + 200);
 
-        int espelhoMundoX = 200; 
-        int espelhoMundoY = 530; 
-        int espelhoLargura = 100;
-        int espelhoAltura = 45;
-
-        int espelhoTelaX = cameraX + espelhoMundoX;
-        int espelhoTelaY = cameraY + espelhoMundoY;
-
-        g2d.setColor(new Color(100, 149, 237, 250));
-        g2d.fillRect(espelhoTelaX, espelhoTelaY, espelhoLargura, espelhoAltura);
-
-        if (mundoX + 28 > espelhoMundoX && mundoX - 28 < espelhoMundoX + espelhoLargura) {
-            int basePersonagemMundoY = mundoY + 28;
-            int baseEspelhoMundoY = espelhoMundoY + espelhoAltura;
-
-            if (basePersonagemMundoY >= baseEspelhoMundoY) {
-                int distanciaDoEspelho = basePersonagemMundoY - baseEspelhoMundoY;
-                int baseEspelhoTelaY = espelhoTelaY + espelhoAltura;
-                int reflexoTelaY_Bottom = baseEspelhoTelaY - (distanciaDoEspelho/5);
-                int reflexoTelaY_Top = reflexoTelaY_Bottom - 56; 
-
-                Shape clipOriginal = g2d.getClip();
-                g2d.setClip(espelhoTelaX, espelhoTelaY, espelhoLargura, espelhoAltura);
-                g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.5f));
-
-                int direcaoReflexo = direcao;
-                if (direcao == 3) direcaoReflexo = 0; 
-                else if (direcao == 0) direcaoReflexo = 3;
-
-                if (direcao == 1) direcaoReflexo = 2;
-                else if (direcao == 2) direcaoReflexo = 1;
-
-                int reflexoSy1 = direcaoReflexo * TAMANHO;
-                int reflexoSy2 = reflexoSy1 + TAMANHO;
-
-                g2d.drawImage(
-                        spriteSheet,
-                        centroX + 28, reflexoTelaY_Top,    
-                        centroX - 28, reflexoTelaY_Bottom, 
-                        sx1, reflexoSy1,                     
-                        sx2, reflexoSy2,                     
-                        this
-                );
-
-                g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1.0f));
-                g2d.setClip(clipOriginal);
+                if (partesObjetoCircular >= 1) {
+                    g2d.setColor(Color.LIGHT_GRAY);
+                    g2d.fillRect(px + 100, py + 50, 100, 100);
+                    g2d.setColor(Color.BLACK);
+                    g2d.drawString("PEÇA 1", px + 120, py + 100);
+                }
+                if (partesObjetoCircular >= 2) {
+                    g2d.setColor(Color.LIGHT_GRAY);
+                    g2d.fillRect(px + 200, py + 50, 100, 100);
+                    g2d.setColor(Color.BLACK);
+                    g2d.drawString("PEÇA 2", px + 220, py + 100);
+                }
+                g2d.setColor(Color.WHITE);
+                g2d.setFont(new Font("Arial", Font.BOLD, 20));
+                g2d.drawString("Faltam peças (" + partesObjetoCircular + "/3)", centroX - 90, py + puzzleTamanho + 40);
             }
+            g2d.setColor(Color.WHITE);
+            g2d.setFont(new Font("Arial", Font.BOLD, 14));
+            g2d.drawString("Pressione [ESC] ou [E] para fechar", centroX - 120, py + puzzleTamanho + 80);
+            return;
         }
-        // ==========================================
 
-        // 3. DESENHA O PERSONAGEM REAL (Sempre por cima do mapa e do espelho)
-        g2d.drawImage(
-                spriteSheet,
-                centroX - 28,
-                centroY - 28,
-                centroX + 28,
-                centroY + 28,
-                sx1,
-                sy1,
-                sx2,
-                sy2,
-                this
-        );
+        // ===============================================
+        // AVISOS NA TELA (Saber quando pode apertar 'E')
+        // ===============================================
+        Rectangle areaJogador = new Rectangle(mundoX, mundoY, Largura_Hitbox, Altura_Hitbox);
+        g2d.setColor(Color.WHITE);
+        g2d.setFont(new Font("Arial", Font.BOLD, 16));
 
-        // 4. DESENHA A LUZ/SOMBRA DO MAPA
-        g2d.drawImage(luzMapa, cameraX, cameraY, luzMapa.getWidth(this)*escala, luzMapa.getHeight(this)*escala, this);
+        if (!mundoUmbra) { // Mensagens do Mundo Real
+            if (areaJogador.intersects(areaPilula)) g2d.drawString("Aperte [E] para tomar a Pilula", centroX - 120, centroY - 40);
+            else if (areaJogador.intersects(areaNPC)) g2d.drawString("Aperte [E] para falar com o Paciente", centroX - 140, centroY - 40);
+            else if (areaJogador.intersects(areaDocumento)) g2d.drawString("Aperte [E] para ler o Papel", centroX - 120, centroY - 40);
+            else mensagemAviso = ""; // Se afastar, limpa a mensagem de diálogo
+        } else { // Mensagens do Mundo Umbra
+            if (areaJogador.intersects(areaCama)) g2d.drawString("Aperte [E] para Acordar", centroX - 120, centroY - 40);
+            else if (areaJogador.intersects(areaPortaUmbra)) g2d.drawString("Aperte [E] para inspecionar a Porta", centroX - 130, centroY - 40);
+            else if (areaJogador.intersects(areaEspelho)) g2d.drawString("Aperte [E] para olhar no Espelho", centroX - 130, centroY - 40);
+            else if (areaJogador.intersects(areaGaveta)) g2d.drawString("Aperte [E] para abrir a Gaveta", centroX - 130, centroY - 40);
+            else mensagemAviso = "";
+        }
 
-        // ==========================================
-        // 5. DESENHO DO MENU DE PAUSA
-        // ==========================================
+        // Desenha textos amarelados embaixo do jogador (Dicas, conversas)
+        if (!mensagemAviso.isEmpty()) {
+            g2d.setColor(Color.YELLOW);
+            g2d.setFont(new Font("Arial", Font.BOLD, 14));
+            g2d.drawString(mensagemAviso, centroX - 180, centroY + 60);
+        }
+
+        // TELA DE PAUSA (ESC)
         if (pausado) {
             g2d.setColor(new Color(0, 0, 0, 180));
             g2d.fillRect(0, 0, getWidth(), getHeight());
-
             g2d.setColor(Color.WHITE);
             g2d.setFont(new Font("Arial", Font.BOLD, 40));
-
             g2d.drawString(opcao == 0 ? "-> VOLTAR" : "   VOLTAR", centroX - 100, centroY);
             g2d.drawString(opcao == 1 ? "-> SAIR" : "   SAIR", centroX - 100, centroY + 60);
         }
     }
-    
-    //
-    // Sem as linhas da hi8tbox do mapa 
-    //
-    /* 
-    @Override
-    public void paintComponent(Graphics g) {
-        super.paintComponent(g);
-        Graphics2D g2d = (Graphics2D) g;
 
-        g2d.setColor(Color.BLACK);
-        g2d.fillRect(0, 0, getWidth(), getHeight());
-
-        // Centro REAL da tela
-        int centroX = getWidth() / 2;
-        int centroY = getHeight() / 2;
-
-        // Câmera
-        int cameraX = centroX - mundoX;
-        int cameraY = centroY - mundoY;
-
-        int escala = 2;
-
-        // 1. DESENHA O MAPA
-        g2d.drawImage(imagemMapa, cameraX, cameraY, imagemMapa.getWidth(this)*escala, imagemMapa.getHeight(this)*escala, this);
-
-        // Coordenadas do frame na spritesheet
-        int sx1 = frame * TAMANHO;
-        int sy1 = direcao * TAMANHO;
-        int sx2 = sx1 + TAMANHO;
-        int sy2 = sy1 + TAMANHO;
-
-        // ==========================================
-        // 2. LÓGICA DO ESPELHO / REFLEXO
-        // ==========================================
-
-        // Ajuste essas propriedades para bater exatamente com a localização do espelho no seu 'quarto.png'
-        int espelhoMundoX = 200; // Eixo X do espelho no MUNDO
-        int espelhoMundoY = 530; // Eixo Y do espelho no MUNDO
-        int espelhoLargura = 100;
-        int espelhoAltura = 45;
-
-        // Converte as coordenadas do espelho no mundo para coordenadas de TELA (acompanhando a câmera)
-        int espelhoTelaX = cameraX + espelhoMundoX;
-        int espelhoTelaY = cameraY + espelhoMundoY;
-
-        // Desenha um fundo translúcido para o espelho, para dar aparência de vidro
-        g2d.setColor(new Color(100, 149, 237, 250));
-        g2d.fillRect(espelhoTelaX, espelhoTelaY, espelhoLargura, espelhoAltura);
-
-        // O boneco tem largura total de 56 (vai de centroX - 28 a centroX + 28)
-        // Verifica se o eixo X do jogador (mundoX) está dentro da área horizontal do espelho
-        if (mundoX + 28 > espelhoMundoX && mundoX - 28 < espelhoMundoX + espelhoLargura) {
-
-            // Base inferior onde o personagem está pisando no mundo
-            int basePersonagemMundoY = mundoY + 28;
-            // Base inferior do espelho no mundo
-            int baseEspelhoMundoY = espelhoMundoY + espelhoAltura;
-
-            // Desenha o reflexo apenas se o jogador estiver "abaixo" (na frente) do espelho
-            if (basePersonagemMundoY >= baseEspelhoMundoY) {
-
-                int distanciaDoEspelho = basePersonagemMundoY - baseEspelhoMundoY;
-
-                // Matemática do Reflexo adaptada para a Câmera:
-                int baseEspelhoTelaY = espelhoTelaY + espelhoAltura;
-                int reflexoTelaY_Bottom = baseEspelhoTelaY - (distanciaDoEspelho/5);
-                int reflexoTelaY_Top = reflexoTelaY_Bottom - 56; // 56 é a altura do personagem (28 * 2)
-
-                Shape clipOriginal = g2d.getClip();
-                // Limita a área de desenho estritamente aos limites do espelho na tela
-                g2d.setClip(espelhoTelaX, espelhoTelaY, espelhoLargura, espelhoAltura);
-
-                // Aplica 50% de opacidade
-                g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.5f));
-
-                // Se olha pra cima (3), o reflexo usa o sprite de olhar pra baixo (0)
-                int direcaoReflexo = direcao;
-                if (direcao == 3) direcaoReflexo = 0; // Frente <-> Costas
-                else if (direcao == 0) direcaoReflexo = 3;
-
-                // Inverter Esquerda <-> Direita se seu spritesheet tiver lados diferentes
-                if (direcao == 1) direcaoReflexo = 2;
-                else if (direcao == 2) direcaoReflexo = 1;
-
-                int reflexoSy1 = direcaoReflexo * TAMANHO;
-                int reflexoSy2 = reflexoSy1 + TAMANHO;
-
-                //  Inversão Horizontal (Eixo X):
-                // No drawImage, trocamos o destinoX1 pelo destinoX2.
-                // O padrão é (X_Esquerda, Y_Topo, X_Direita, Y_Base)
-
-                g2d.drawImage(
-                        spriteSheet,
-                        centroX + 28, reflexoTelaY_Top,    // Canto Superior Esquerdo de Destino (Invertido horizontalmente usando X+28)
-                        centroX - 28, reflexoTelaY_Bottom, // Canto Inferior Direito de Destino (Invertido horizontalmente usando X-28)
-                        sx1, reflexoSy1,                     // Topo/Esquerda da Spritesheet (Usa o novo Sy1 calculado)
-                        sx2, reflexoSy2,                     // Base/Direita da Spritesheet (Usa o novo Sy2 calculado)
-                        this
-                );
-
-                // Restaura as propriedades gráficas originais
-                g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1.0f));
-                g2d.setClip(clipOriginal);
-            }
-        }
-         
-        // ==========================================
-
-        // 3. DESENHA O PERSONAGEM REAL (Sempre por cima do mapa e do espelho)
-        g2d.drawImage(
-                spriteSheet,
-                centroX - 28,
-                centroY - 28,
-                centroX + 28,
-                centroY + 28,
-                sx1,
-                sy1,
-                sx2,
-                sy2,
-                this
-        );
-
-        // 4. DESENHA A LUZ/SOMBRA DO MAPA
-        g2d.drawImage(luzMapa, cameraX, cameraY, luzMapa.getWidth(this)*escala, luzMapa.getHeight(this)*escala, this);
-
-        // ==========================================
-        // 5. DESENHO DO MENU DE PAUSA
-        // ==========================================
-        if (pausado) {
-            g2d.setColor(new Color(0, 0, 0, 180));
-            g2d.fillRect(0, 0, getWidth(), getHeight());
-
-            g2d.setColor(Color.WHITE);
-            g2d.setFont(new Font("Arial", Font.BOLD, 40));
-
-            g2d.drawString(opcao == 0 ? "-> VOLTAR" : "   VOLTAR", centroX - 100, centroY);
-            g2d.drawString(opcao == 1 ? "-> SAIR" : "   SAIR", centroX - 100, centroY + 60);
-        }
-    }
-    */
+    // ===============================================
+    // LÓGICA DO TECLADO (Quando o jogador aperta um botão)
+    // ===============================================
     @Override
     public void keyPressed(KeyEvent e) {
         int tecla = e.getKeyCode();
 
-        // Pausa
-        if (tecla == KeyEvent.VK_ESCAPE) { pausado = !pausado; repaint(); return; }
+        // Tecla H - Ativa o Desenho do Modo Debug (Ferramenta do Dev)
+        // OBS: Usamos repaint() sempre que mudamos uma tela para que o Java pinte o frame imediatamente
+        if (tecla == KeyEvent.VK_H) { mostrarHitboxes = !mostrarHitboxes; repaint(); return; }
 
-        // Menu Pausa
+        // Tecla ESC - Sai de puzzles ou abre o menu de pausa
+        if (tecla == KeyEvent.VK_ESCAPE) {
+            if (mostrandoPuzzlePorta) { mostrandoPuzzlePorta = false; repaint(); return; }
+            if (mostrandoEspelho) { mostrandoEspelho = false; repaint(); return; }
+            pausado = !pausado; repaint(); return;
+        }
+
+        // Lógica do Menu de Pausa (Sobe/Desce e Enter)
         if (pausado) {
             if (tecla == KeyEvent.VK_UP || tecla == KeyEvent.VK_W) opcao = 0;
             if (tecla == KeyEvent.VK_DOWN || tecla == KeyEvent.VK_S) opcao = 1;
             if (tecla == KeyEvent.VK_ENTER && opcao == 0) pausado = false;
-            if (tecla == KeyEvent.VK_ENTER && opcao == 1) System.exit(0);
-            repaint();
-            return;
+            if (tecla == KeyEvent.VK_ENTER && opcao == 1) System.exit(0); // Fecha o jogo
+            repaint(); return;
         }
 
+        // Tecla E - Fecha os pop-ups se eles estiverem abertos
+        if (mostrandoPuzzlePorta && tecla == KeyEvent.VK_E) { mostrandoPuzzlePorta = false; repaint(); return; }
+        if (mostrandoEspelho && tecla == KeyEvent.VK_E) { mostrandoEspelho = false; repaint(); return; }
+
+        // --- SISTEMA DE INTERAÇÃO (Tecla E) ---
+        if (tecla == KeyEvent.VK_E) {
+            Rectangle areaJogador = new Rectangle(mundoX, mundoY, Largura_Hitbox, Altura_Hitbox);
+
+            // INTERAÇÕES NO MUNDO REAL (Hospital)
+            if (!mundoUmbra) {
+                // Entrar no Umbra
+                if (areaJogador.intersects(areaPilula)) { mundoUmbra = true; repaint(); }
+
+                // Conversar com o Paciente Louco (NPC)
+                else if (areaJogador.intersects(areaNPC)) {
+                    if (!pegouPecaNpc) {
+                        if (sabePalavraMagica) { // Só entrega a peça se souber a senha que viu na gaveta
+                            pegouPecaNpc = true; partesObjetoCircular++;
+                            mensagemAviso = "NPC: Você disse a palavra certa! Aqui está a última peça.";
+                        } else {
+                            mensagemAviso = "NPC: Eu tenho algo útil, mas... qual é a palavra mágica?";
+                        }
+                    } else mensagemAviso = "NPC: Vá em frente, você tem o que precisa.";
+                    repaint();
+                }
+
+                // Tentar ler o Documento (Finaliza a Missão 1)
+                else if (areaJogador.intersects(areaDocumento)) {
+                    if (!portaUmbraDestrancada) { // Se não destrancou a porta, o papel é ilegível
+                        mensagemAviso = "As letras estão borradas, parecem dançar. Não consigo ler..."; repaint();
+                    } else { // Se destrancou, termina a missão
+                        if (!leuDocumentoRecepcao) {
+                            leuDocumentoRecepcao = true; documentosAchados++; missaoAtual = 2;
+
+                            somPassos.stop(); andando = false; // Trava o boneco para não continuar andando de fundo
+
+                            String txt = "CONTEÚDO DO PAPEL:\n'Relatório de Incidente - Casa de Repouso Elímar Gonzales...'\n\n[Missão 'Primeiros Passos' Concluída!]\n[Missão 2 Iniciada: O terror psicológico começa...]";
+                            JOptionPane.showMessageDialog(this, txt, "Documento Encontrado", JOptionPane.INFORMATION_MESSAGE); // Caixa nativa do Windows
+                            repaint();
+                        } else { mensagemAviso = "Você já leu este documento."; repaint(); }
+                    }
+                }
+            }
+            // INTERAÇÕES NO MUNDO UMBRA (Pesadelo)
+            else {
+                // Acordar (Voltar ao Real)
+                if (areaJogador.intersects(areaCama)) { mundoUmbra = false; repaint(); }
+
+                // Abrir Puzzle da Porta
+                else if (areaJogador.intersects(areaPortaUmbra) && !portaUmbraDestrancada) {
+                    mostrandoPuzzlePorta = true;
+                    if (partesObjetoCircular == 3) portaUmbraDestrancada = true;
+                    repaint();
+                }
+
+                // Olhar o Espelho e pegar a Peça 1
+                else if (areaJogador.intersects(areaEspelho)) {
+                    mostrandoEspelho = true;
+                    if (!pegouPecaEspelho) {
+                        pegouPecaEspelho = true; partesObjetoCircular++;
+                        mensagemAviso = "Você encontrou a 1ª parte no reflexo do espelho!";
+                    }
+                    repaint();
+                }
+
+                // Abrir a Gaveta, digitar a senha e pegar Peça 2 + Palavra
+                else if (areaJogador.intersects(areaGaveta)) {
+                    if (!pegouPecaGaveta) {
+                        somPassos.stop(); andando = false;
+
+                        String senha = JOptionPane.showInputDialog(this, "Cadeado de 4 dígitos (Digite a senha):");
+
+                        // Senha correta validada
+                        if (senha != null && senha.equals("0410")) {
+                            pegouPecaGaveta = true; sabePalavraMagica = true; partesObjetoCircular++;
+                            mensagemAviso = "Você achou a 2ª peça e um bilhete com a palavra 'Redenção'.";
+                        } else if (senha != null && !senha.isEmpty()) {
+                            mensagemAviso = "Senha incorreta. O cadeado não abriu.";
+                        }
+                        repaint();
+                    }
+                }
+            }
+        }
+
+        // Se uma tela de Puzzle estiver aberta, o código para aqui para impedir a boneca de andar
+        if (mostrandoPuzzlePorta || mostrandoEspelho) return;
+
+        // --- SISTEMA DE MOVIMENTAÇÃO (WASD ou Setinhas) ---
         boolean movendo = false;
 
-        // DIREITA
+        // Verifica com o GerenciadorColisao se a Clara pode dar o passo sem bater em nada
         if (tecla == KeyEvent.VK_RIGHT || tecla == KeyEvent.VK_D) {
             int novoX = mundoX + Velocidade;
-            // Valida se a hitbox do personagem estará contida em uma zona caminhável
-            if (sistemaColisao.verificarPosicaoValida(novoX, mundoY, Largura_Hitbox, Altura_Hitbox)) {
-                mundoX = novoX;
-            }
-            direcao = 1;
-            movendo = true;
+            if (sistemaColisao.verificarPosicaoValida(novoX, mundoY, Largura_Hitbox, Altura_Hitbox, mundoUmbra, portaUmbraDestrancada)) mundoX = novoX;
+            direcao = 1; movendo = true;
         }
-
-        // ESQUERDA
         if (tecla == KeyEvent.VK_LEFT || tecla == KeyEvent.VK_A) {
             int novoX = mundoX - Velocidade;
-            // Valida se a hitbox do personagem estará contida em uma zona caminhável
-            if (sistemaColisao.verificarPosicaoValida(novoX, mundoY, Largura_Hitbox, Altura_Hitbox)) {
-                mundoX = novoX;
-            }
-            direcao = 2;
-            movendo = true;
+            if (sistemaColisao.verificarPosicaoValida(novoX, mundoY, Largura_Hitbox, Altura_Hitbox, mundoUmbra, portaUmbraDestrancada)) mundoX = novoX;
+            direcao = 2; movendo = true;
         }
-
-        // CIMA
         if (tecla == KeyEvent.VK_UP || tecla == KeyEvent.VK_W) {
             int novoY = mundoY - Velocidade;
-            // Valida se a hitbox do personagem estará contida em uma zona caminhável
-            if (sistemaColisao.verificarPosicaoValida(mundoX, novoY, Largura_Hitbox, Altura_Hitbox)) {
-                mundoY = novoY;
-            }
-            direcao = 3;
-            movendo = true;
+            if (sistemaColisao.verificarPosicaoValida(mundoX, novoY, Largura_Hitbox, Altura_Hitbox, mundoUmbra, portaUmbraDestrancada)) mundoY = novoY;
+            direcao = 3; movendo = true;
         }
-
-        // BAIXO
         if (tecla == KeyEvent.VK_DOWN || tecla == KeyEvent.VK_S) {
             int novoY = mundoY + Velocidade;
-            // Valida se a hitbox do personagem estará contida em uma zona caminhável
-            if (sistemaColisao.verificarPosicaoValida(mundoX, novoY, Largura_Hitbox, Altura_Hitbox)) {
-                mundoY = novoY;
-            }
-            direcao = 0;
-            movendo = true;
+            if (sistemaColisao.verificarPosicaoValida(mundoX, novoY, Largura_Hitbox, Altura_Hitbox, mundoUmbra, portaUmbraDestrancada)) mundoY = novoY;
+            direcao = 0; movendo = true;
         }
 
-        // Animação
+        // --- CONTROLA O ÁUDIO E A ANIMAÇÃO ---
         if (movendo) {
             contadorAnimacao++;
-            if (contadorAnimacao >= 4) {
+            if (contadorAnimacao >= 4) { // Se deu X passos, troca o pé da animação
                 contadorAnimacao = 0;
                 frame++;
-                if (frame > 3) frame = 0;
+                if (frame > 3) frame = 0; // O sprite tem 4 colunas (0, 1, 2, 3)
             }
-
-            if (!andando) {
+            if (!andando) { // Dá play no áudio se ele não estava tocando
                 somPassos.setFramePosition(0);
                 somPassos.loop(Clip.LOOP_CONTINUOUSLY);
                 andando = true;
             }
         }
-        repaint();
+        repaint(); // Desenha a tela novamente com a Clara na nova posição
     }
 
-    @Override
-    public void keyReleased(KeyEvent e) {
-        if (pausado) return;
-        frame = 0;
+    // Quando o jogador solta o botão do teclado
+    @Override public void keyReleased(KeyEvent e) {
+        if (pausado || mostrandoPuzzlePorta || mostrandoEspelho) return;
 
-        somPassos.stop();
+        frame = 0; // Boneca volta para a pose parada com os pés juntos
+        somPassos.stop(); // Para o áudio de passos
         andando = false;
-
         repaint();
     }
 
-    @Override
-    public void keyTyped(KeyEvent e) {}
+    // Método obrigatório do Java para o KeyListener, não usamos neste jogo
+    @Override public void keyTyped(KeyEvent e) {}
 }
