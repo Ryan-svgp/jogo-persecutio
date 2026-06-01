@@ -36,6 +36,8 @@ public class JogoExploracao extends JPanel implements KeyListener {
     // Controlam se o jogo deve pausar a tela para mostrar uma imagem de perto (puzzle)
     boolean mostrandoPuzzlePorta = false;
     boolean mostrandoEspelho = false;
+    boolean mostrandoImagemFinalNpc = false;
+    boolean mostrarTextoAreaLiberada = false;
 
     // Definição das coordenadas (X e Y) de todos os objetos interativos do jogo
     public Rectangle areaPilula = new Rectangle(115, 560, 50, 50);
@@ -66,6 +68,11 @@ public class JogoExploracao extends JPanel implements KeyListener {
     Image luzMapa;
     Image imgNPC;
     Image imgEnfermeira;
+    Image imgPorta0; // parte1.jpg (Vazia)
+    Image imgPorta1; // parte2.jpg (1 Peça)
+    Image imgPorta2; // parte3.jpg (2 Peças)
+    Image imgPorta3; // parte4.jpg (Completa)
+    Font fontePress;
     Clip somPassos;
     Clip ambiente;
 
@@ -81,6 +88,19 @@ public class JogoExploracao extends JPanel implements KeyListener {
         luzMapa = new ImageIcon("img/luz-sombra-temp.png").getImage();
         imgNPC = new ImageIcon("img/npc.png").getImage();
         imgEnfermeira = new ImageIcon("img/enfermeira.png").getImage();
+        imgPorta0 = new ImageIcon("img/parte1.png").getImage();
+        imgPorta1 = new ImageIcon("img/parte2.png").getImage();
+        imgPorta2 = new ImageIcon("img/parte3.png").getImage();
+        imgPorta3 = new ImageIcon("img/parte4.png").getImage();
+
+        try {
+            // Tenta carregar a fonte igual fizemos no Menu
+            fontePress = Font.createFont(Font.TRUETYPE_FONT, new File("fonte/press.ttf"));
+            fontePress = fontePress.deriveFont(16f); // Tamanho 16 para caber na tela
+        } catch (Exception e) {
+            System.out.println("Erro ao carregar fonte no JogoExploracao");
+            fontePress = new Font("Arial", Font.BOLD, 16); // Fallback caso dê erro
+        }
 
         // Inicializa as nossas classes personalizadas
         sistemaColisao = new GerenciadorColisao();
@@ -141,7 +161,7 @@ public class JogoExploracao extends JPanel implements KeyListener {
         // ==========================================
         // DESENHA OS NPCs (SÓ NO MUNDO REAL)
         // ==========================================
-        // Fica aqui em cima para que a sombra escureça os NPCs também!
+
         if (!mundoUmbra) {
             // Desenha o chão do hospital
             g2d.drawImage(imagemMapa, cameraX, cameraY, imagemMapa.getWidth(this)*escala, imagemMapa.getHeight(this)*escala, this);
@@ -149,7 +169,7 @@ public class JogoExploracao extends JPanel implements KeyListener {
             // POSIÇÃO DO PACIENTE:
             if (imgNPC != null) {
                 int npcX = 1600; // Mude para mover o desenho para os lados
-                int npcY = 280;  // Mude para mover o desenho para cima/baixo
+                int npcY = 300;  // Mude para mover o desenho para cima/baixo
                 g2d.drawImage(imgNPC, cameraX + npcX, cameraY + npcY, 150, 170, this);
             }
 
@@ -245,6 +265,38 @@ public class JogoExploracao extends JPanel implements KeyListener {
         // TELAS DE POP-UP (Telas que abrem no meio do jogo)
         // ===============================================
 
+        // ===============================================
+        // CINEMÁTICA DA ÚLTIMA PEÇA (NO NPC)
+        // ===============================================
+        if (mostrandoImagemFinalNpc) {
+            // Escurece o fundo
+            g2d.setColor(new Color(0, 0, 0, 220));
+            g2d.fillRect(0, 0, getWidth(), getHeight());
+
+            int puzzleTamanho = 400;
+            int px = centroX - (puzzleTamanho / 2);
+            int py = centroY - (puzzleTamanho / 2);
+
+            // Desenha a parte 4 (Cadeado completo)
+            if (imgPorta3 != null) {
+                g2d.drawImage(imgPorta3, px, py, puzzleTamanho, puzzleTamanho, this);
+            }
+            return; // O return bloqueia o resto da tela para focar só na imagem
+        }
+
+        // ===============================================
+        // TEXTO FLUTUANTE DE ÁREA LIBERADA
+        // ===============================================
+        if (mostrarTextoAreaLiberada) {
+            g2d.setColor(Color.GREEN);
+            if (fontePress != null) {
+                g2d.setFont(fontePress.deriveFont(20f)); // Aumenta a fonte para 20
+            } else {
+                g2d.setFont(new Font("Arial", Font.BOLD, 20));
+            }
+            g2d.drawString("AREA LIBERADA NO MUNDO UMBRA", centroX - 250, centroY - 150);
+        }
+
         // TELA DO ENIGMA DO ESPELHO (Imagem do relógio)
         if (mostrandoEspelho) {
             g2d.setColor(new Color(0, 0, 0, 220)); // Fundo preto transparente
@@ -272,44 +324,40 @@ public class JogoExploracao extends JPanel implements KeyListener {
         }
 
         // TELA DO ENIGMA DA PORTA TRANCADA
-        if (mostrandoPuzzlePorta) {
-            g2d.setColor(new Color(0, 0, 0, 220));
+        if (mostrandoPuzzlePorta) {g2d.setColor(new Color(0, 0, 0, 220));
             g2d.fillRect(0, 0, getWidth(), getHeight());
+
             int puzzleTamanho = 400;
             int px = centroX - (puzzleTamanho / 2);
             int py = centroY - (puzzleTamanho / 2);
 
-            // Se pegou as 3 peças, desenha a tela final (meia de bebê)
+            // Se pegou as 3 peças, desenha a tela final (parte 4)
             if (partesObjetoCircular == 3) {
-                g2d.setColor(Color.WHITE);
-                g2d.drawRect(px, py, puzzleTamanho, puzzleTamanho);
-                g2d.drawString("[IMAGEM DA MEIA DE BEBÊ]", px + 40, py + 200);
-                g2d.setColor(Color.GREEN);
-                g2d.setFont(new Font("Arial", Font.BOLD, 20));
-                g2d.drawString("Porta Destrancada!", centroX - 80, py + puzzleTamanho + 40);
-            } else {
-                // Se faltam peças, desenha o buraco e as peças que ela já pegou
-                g2d.setColor(Color.GRAY);
-                g2d.fillRect(px, py, puzzleTamanho, puzzleTamanho);
-                g2d.setColor(Color.WHITE);
-                g2d.drawString("[BURACO VAZIO DA PORTA]", px + 60, py + 200);
+                if (imgPorta3 != null) {
+                    g2d.drawImage(imgPorta3, px, py, puzzleTamanho, puzzleTamanho, this);
+                }
 
-                if (partesObjetoCircular >= 1) {
-                    g2d.setColor(Color.LIGHT_GRAY);
-                    g2d.fillRect(px + 100, py + 50, 100, 100);
-                    g2d.setColor(Color.BLACK);
-                    g2d.drawString("PEÇA 1", px + 120, py + 100);
+                // MENSAGEM COM A FONTE PRESS!
+                g2d.setColor(Color.GREEN);
+                g2d.setFont(fontePress);
+                // Texto centralizado (ajustado para a fonte Press)
+                g2d.drawString("AREA LIBERADA NO MUNDO UMBRA", centroX - 220, py + puzzleTamanho + 50);
+            } else {
+                // Desenha a parte correta dependendo de quantas peças ela tem
+                if (partesObjetoCircular == 2 && imgPorta2 != null) {
+                    g2d.drawImage(imgPorta2, px, py, puzzleTamanho, puzzleTamanho, this);
+                } else if (partesObjetoCircular == 1 && imgPorta1 != null) {
+                    g2d.drawImage(imgPorta1, px, py, puzzleTamanho, puzzleTamanho, this);
+                } else if (imgPorta0 != null) {
+                    g2d.drawImage(imgPorta0, px, py, puzzleTamanho, puzzleTamanho, this);
                 }
-                if (partesObjetoCircular >= 2) {
-                    g2d.setColor(Color.LIGHT_GRAY);
-                    g2d.fillRect(px + 200, py + 50, 100, 100);
-                    g2d.setColor(Color.BLACK);
-                    g2d.drawString("PEÇA 2", px + 220, py + 100);
-                }
+
+                // Mostra quantas peças faltam
                 g2d.setColor(Color.WHITE);
                 g2d.setFont(new Font("Arial", Font.BOLD, 20));
                 g2d.drawString("Faltam peças (" + partesObjetoCircular + "/3)", centroX - 90, py + puzzleTamanho + 40);
             }
+
             g2d.setColor(Color.WHITE);
             g2d.setFont(new Font("Arial", Font.BOLD, 14));
             g2d.drawString("Pressione [ESC] ou [E] para fechar", centroX - 120, py + puzzleTamanho + 80);
@@ -394,16 +442,46 @@ public class JogoExploracao extends JPanel implements KeyListener {
                 // Entrar no Umbra
                 if (areaJogador.intersects(areaPilula)) { mundoUmbra = true; repaint(); }
 
-                // Conversar com o Paciente Louco (NPC)
+                // Conversar com o Paciente  (NPC)
                 else if (areaJogador.intersects(areaNPC)) {
                     if (!pegouPecaNpc) {
-                        if (sabePalavraMagica) { // Só entrega a peça se souber a senha que viu na gaveta
-                            pegouPecaNpc = true; partesObjetoCircular++;
-                            mensagemAviso = "NPC: Você disse a palavra certa! Aqui está a última peça.";
+                        if (sabePalavraMagica) {
+                            pegouPecaNpc = true;
+                            partesObjetoCircular++;
+
+                            // 1. Inicia a Cinemática!
+                            mostrandoImagemFinalNpc = true;
+                            mensagemAviso = ""; // Limpa os avisos normais
+
+                            // 2. Cria um relógio de 3 segundos (3000 milissegundos)
+                            Timer timerAnimacao = new Timer(3000, new ActionListener() {
+                                @Override
+                                public void actionPerformed(ActionEvent evt) {
+                                    mostrandoImagemFinalNpc = false; // Esconde a imagem 4
+                                    mostrarTextoAreaLiberada = true; // Mostra o texto verde
+                                    repaint();
+
+                                    // 3. Relógio de 4 segundos para o texto verde desaparecer e o jogo voltar ao normal
+                                    Timer timerTexto = new Timer(4000, new ActionListener() {
+                                        @Override
+                                        public void actionPerformed(ActionEvent evt2) {
+                                            mostrarTextoAreaLiberada = false;
+                                            repaint();
+                                        }
+                                    });
+                                    timerTexto.setRepeats(false);
+                                    timerTexto.start();
+                                }
+                            });
+                            timerAnimacao.setRepeats(false); // Para o relógio rodar só uma vez
+                            timerAnimacao.start();
+
                         } else {
                             mensagemAviso = "NPC: Eu tenho algo útil, mas... qual é a palavra mágica?";
                         }
-                    } else mensagemAviso = "NPC: Vá em frente, você tem o que precisa.";
+                    } else {
+                        mensagemAviso = "NPC: Vá em frente, você tem o que precisa.";
+                    }
                     repaint();
                 }
 
@@ -467,7 +545,7 @@ public class JogoExploracao extends JPanel implements KeyListener {
         }
 
         // Se uma tela de Puzzle estiver aberta, o código para aqui para impedir a boneca de andar
-        if (mostrandoPuzzlePorta || mostrandoEspelho) return;
+        if (mostrandoPuzzlePorta || mostrandoEspelho || mostrandoImagemFinalNpc) return;
 
         // --- SISTEMA DE MOVIMENTAÇÃO (WASD ou Setinhas) ---
         boolean movendo = false;
