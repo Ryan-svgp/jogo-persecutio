@@ -477,10 +477,10 @@ public class JogoExploracao extends JPanel implements KeyListener {
                             timerAnimacao.start();
 
                         } else {
-                            mensagemAviso = "NPC: Eu tenho algo útil, mas... qual é a palavra mágica?";
+                            mensagemAviso = "Paciente: Eu tenho algo útil, mas... qual é a palavra mágica?";
                         }
                     } else {
-                        mensagemAviso = "NPC: Vá em frente, você tem o que precisa.";
+                        mensagemAviso = "Paciente: Vá em frente, você tem o que precisa.";
                     }
                     repaint();
                 }
@@ -519,7 +519,7 @@ public class JogoExploracao extends JPanel implements KeyListener {
                     mostrandoEspelho = true;
                     if (!pegouPecaEspelho) {
                         pegouPecaEspelho = true; partesObjetoCircular++;
-                        mensagemAviso = "Você encontrou a 1ª parte no reflexo do espelho!";
+                        mensagemAviso = "Você encontrou um fragmento de um objeto circular no reflexo do espelho!";
                     }
                     repaint();
                 }
@@ -534,9 +534,9 @@ public class JogoExploracao extends JPanel implements KeyListener {
                         // Senha correta validada
                         if (senha != null && senha.equals("0410")) {
                             pegouPecaGaveta = true; sabePalavraMagica = true; partesObjetoCircular++;
-                            mensagemAviso = "Você achou a 2ª peça e um bilhete com a palavra 'Redenção'.";
+                            mensagemAviso = "Você achou outro fragmento de um objeto circular e um bilhete com a palavra 'Redenção'.";
                         } else if (senha != null && !senha.isEmpty()) {
-                            mensagemAviso = "Senha incorreta. O cadeado não abriu.";
+                            mensagemAviso = "A porta não abre. Acho que não é esta a senha.";
                         }
                         repaint();
                     }
