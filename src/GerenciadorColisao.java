@@ -62,7 +62,7 @@ public class GerenciadorColisao {
 
         // Exemplo: A Mesa da Enfermeira.
         // Se a hitbox da Clara encostar nisso, ela para de andar.
-        Rectangle mesaEnfermeira = new Rectangle(600 * escala, 100 * escala, 120 * escala, 50 * escala);
+        Rectangle mesaEnfermeira = new Rectangle(200 * escala, 100 * escala, 120 * escala, 50 * escala);
 
         // Adiciona a mesa na lista de bloqueios
         obstaculos.add(mesaEnfermeira);
